@@ -1,4 +1,4 @@
-# Baobab Pulse Canonical Intelligence Model
+# ADR-Pulse-X01-Baobab Pulse Canonical Intelligence Model
 
 **Document ID:** `ARCH-PULSE-CIM-001`  
 **Status:** Proposed  
