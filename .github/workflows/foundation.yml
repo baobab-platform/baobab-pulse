@@ -13,13 +13,15 @@ permissions:
 
 jobs:
   foundation:
-    # v1.2.0 predates the Foundation Gates profile/floor-comparison fixes
-    # (infra + frontend-e2e profiles, Gem::Version floor check, prerelease
-    # suffix normalization) and was failing this repo's own minimum_version
-    # check outright. No tag covers the fixed commit yet, so pinning to the
-    # commit SHA directly; verified live via
-    # `git ls-remote https://github.com/nabhold/shared.git main`.
-    uses: nabhold/shared/.github/workflows/foundation-repository-gates.yml@c518b9aa7be1e67c2b9d360c75a97123ee47382f
+    # 2026-09-16: repointed to nabhold/shared's main HEAD (d6c751a), which
+    # adds a live GHCR resolution check for this repo's declared baobab-dev
+    # tag -- the previous pin only validated environment.yaml and
+    # devcontainer.json agree with EACH OTHER, never that the image they
+    # agree on still exists on GHCR. No tag newer than v1.3.0 exists on
+    # nabhold/shared yet, so this pins the raw commit SHA directly, same
+    # convention already in use here and across baobab-cp/baobab-trade/
+    # baobab-iam/infrastructure/baobab-erp/zuribeans/baobab-cms.
+    uses: nabhold/shared/.github/workflows/foundation-repository-gates.yml@d6c751ad9e5b85ed854c4ad3270bff4b7ac3c8cc
     with:
       dockerfile: "Dockerfile"
       build_context: "."
