@@ -12,4 +12,8 @@ environment:
 package_managers:
   python: uv
 artifacts:
-  container: true
+  container:
+    enabled: true
+    dockerfile: Dockerfile
+    context: .
+    runtime: true
