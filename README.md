@@ -241,7 +241,7 @@ authoring session (not a real gap in Haystack or Python 3.14 support).
   Haystack pipeline run against `MockChatGenerator`, real Qdrant
   upsert/retrieve/tenant/classification/staleness round trips against
   Qdrant's embedded in-process mode, dependency-boundary enforcement, and
-  contract validation against vendored `nabhold/shared` JSON Schemas.
+  contract validation against vendored `baobab-platform/shared` JSON Schemas.
 - **Architecture tests** (`tests/architecture/`) mechanically enforce the
   platform's dependency-boundary invariants — Haystack *and* Qdrant/
   `haystack_integrations` isolation (only
@@ -303,7 +303,7 @@ required, a `tenant_context` referencing the Control-Plane-minted tenant id
 
 ## Integration boundaries
 
-- **`nabhold/shared`**: canonical event envelope (CloudEvents profile) and
+- **`baobab-platform/shared`**: canonical event envelope (CloudEvents profile) and
   RFC 9457 error contract are mirrored field-for-field in
   `contracts/events.py`/`contracts/errors.py`, validated in CI against
   vendored copies of the live schemas.
