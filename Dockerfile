@@ -35,6 +35,11 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && find /app/.venv -type d \( -name 'msgpack-1.1.2.dist-info' -o -name 'setuptools-70.3.0.dist-info' \) -prune -exec rm -rf '{}' +
 
 FROM python:3.14.7-alpine3.23 AS runtime
+ARG VERSION=0.0.0-dev
+ARG REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/baobab-platform/baobab-pulse" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}"
 
 RUN apk upgrade --no-cache \
     && find /usr/local/lib/python3.14 -type d \( -name 'msgpack-1.1.2.dist-info' -o -name 'setuptools-70.3.0.dist-info' \) -prune -exec rm -rf '{}' + \
