@@ -19,10 +19,10 @@ jobs:
     permissions:
       issues: write
       pull-requests: write
-    # Pin is nabhold/shared's v1.2.0 tag (annotated — peeled commit, not
+    # Pin is baobab-platform/shared's v1.2.0 tag (annotated — peeled commit, not
     # the tag object's own SHA), verified live via
-    # `git ls-remote --tags https://github.com/nabhold/shared.git v1.2.0`.
-    uses: nabhold/shared/.github/workflows/greetings.yml@38defb11aacd95a6f68b7db8026fe336417a2af6 # v1.2.0
+    # `git ls-remote --tags https://github.com/baobab-platform/shared.git v1.2.0`.
+    uses: baobab-platform/shared/.github/workflows/greetings.yml@38defb11aacd95a6f68b7db8026fe336417a2af6 # v1.2.0
     with:
       issue-message: "Thanks for opening your first issue here — a maintainer will take a look shortly."
       pr-message: "Thanks for your first pull request here — a maintainer will review it shortly."

@@ -10,18 +10,15 @@ on:
 
 permissions:
   contents: read
+  packages: read
+  actions: read
+  security-events: write
 
 jobs:
   foundation:
-    # 2026-09-16: repointed to nabhold/shared's main HEAD (d6c751a), which
-    # adds a live GHCR resolution check for this repo's declared baobab-dev
-    # tag -- the previous pin only validated environment.yaml and
-    # devcontainer.json agree with EACH OTHER, never that the image they
-    # agree on still exists on GHCR. No tag newer than v1.3.0 exists on
-    # nabhold/shared yet, so this pins the raw commit SHA directly, same
-    # convention already in use here and across baobab-cp/baobab-trade/
-    # baobab-iam/infrastructure/baobab-erp/zuribeans/baobab-cms.
-    uses: nabhold/shared/.github/workflows/foundation-repository-gates.yml@d6c751ad9e5b85ed854c4ad3270bff4b7ac3c8cc
+    uses: baobab-platform/shared/.github/workflows/foundation-repository-gates.yml@468f0e6a8e8e4aac5ec37e87264a073752320530
     with:
-      dockerfile: "Dockerfile"
-      build_context: "."
+      foundation_ref: "468f0e6a8e8e4aac5ec37e87264a073752320530"
+      dependency_review_enabled: false
+      advanced_security_enabled: false
+      legacy_metadata_enabled: false
