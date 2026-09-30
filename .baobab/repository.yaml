@@ -1,6 +1,6 @@
 schema_version: 1
 repository:
-  lifecycle: active
+  lifecycle: experimental
 capabilities:
   - python
   - container
