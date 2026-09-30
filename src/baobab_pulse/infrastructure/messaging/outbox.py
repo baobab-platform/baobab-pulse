@@ -22,7 +22,7 @@ from baobab_pulse.domain.shared.base import DomainEvent
 
 
 class InMemoryOutbox:
-    def __init__(self, *, source: str = "https://engines.nabhold.com/baobab-pulse") -> None:
+    def __init__(self, *, source: str = "urn:baobab-platform:service:baobab-pulse") -> None:
         self._source = source
         self.entries: list[PulseEventEnvelope] = []
 
@@ -45,8 +45,8 @@ class InMemoryOutbox:
 
     @staticmethod
     def _dataschema_for(event_type: str) -> str:
-        entity_verb_version = event_type.removeprefix("com.nabhold.pulse.")
-        return f"https://contracts.nabhold.com/pulse/events/v1/{entity_verb_version}.schema.json"
+        entity_verb_version = event_type.removeprefix("com.baobab-platform.pulse.")
+        return f"https://contracts.baobab-platform.com/pulse/events/v1/{entity_verb_version}.schema.json"
 
 
 def _as_uuid(value: str | None) -> UUID:

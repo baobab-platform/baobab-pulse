@@ -75,8 +75,8 @@ class DomainEvent(BaseModel):
 
     This is distinct from the wire event envelope in
     ``baobab_pulse.contracts.events`` (the CloudEvents-profile envelope
-    ``nabhold/shared`` defines): a domain event is an in-process fact; an
-    outbox writer maps it to a dotted ``com.nabhold.pulse.<entity>.<verb>.v1``
+    ``baobab-platform/shared`` defines): a domain event is an in-process fact; an
+    outbox writer maps it to a dotted ``com.baobab-platform.pulse.<entity>.<verb>.v1``
     envelope for cross-engine publication. The domain never constructs the
     wire envelope itself — see ``infrastructure.messaging.outbox``.
     """

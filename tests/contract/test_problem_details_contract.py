@@ -1,4 +1,4 @@
-"""Validates ``ProblemDetails`` against the vendored ``nabhold/shared``
+"""Validates ``ProblemDetails`` against the vendored ``baobab-platform/shared``
 problem-details JSON Schema."""
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ def validator() -> Draft202012Validator:
 
 def test_problem_details_matches_the_org_schema(validator: Draft202012Validator) -> None:
     problem = ProblemDetails(
-        type="https://contracts.nabhold.com/errors/v1/domain_invariant_violation",
+        type="https://contracts.baobab-platform.com/errors/v1/domain_invariant_violation",
         title="InvariantViolation",
         status=422,
         detail="an EvidenceSet must contain at least one entry",
@@ -37,7 +37,7 @@ def test_problem_details_matches_the_org_schema(validator: Draft202012Validator)
 
 def test_problem_details_with_field_errors_matches_the_org_schema(validator: Draft202012Validator) -> None:
     problem = ProblemDetails(
-        type="https://contracts.nabhold.com/errors/v1/validation_error",
+        type="https://contracts.baobab-platform.com/errors/v1/validation_error",
         title="Validation Error",
         status=400,
         code="VALIDATION_ERROR",

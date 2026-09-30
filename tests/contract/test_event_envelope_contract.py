@@ -1,11 +1,11 @@
-"""Validates ``PulseEventEnvelope`` against the vendored ``nabhold/shared``
+"""Validates ``PulseEventEnvelope`` against the vendored ``baobab-platform/shared``
 event-envelope JSON Schema (item 98-99).
 
 The vendored copy lives at ``tests/fixtures/contracts/events/v1/`` in the
 same relative layout as the real repository (with
 ``contracts/control-plane/v1/domain.schema.json`` alongside it, since the
 envelope schema ``$ref``s that file for ``tenantid``) — re-copy both files
-from ``nabhold/shared`` whenever that repository's contract changes.
+from ``baobab-platform/shared`` whenever that repository's contract changes.
 """
 
 from __future__ import annotations
@@ -45,10 +45,10 @@ def test_tenant_scoped_envelope_matches_the_org_schema(validator: Draft202012Val
     envelope = PulseEventEnvelope(
         id=uuid4(),
         type=build_event_type("insight", "published"),
-        source="https://engines.nabhold.com/baobab-pulse",
+        source="urn:baobab-platform:service:baobab-pulse",
         subject="ins_123",
         time="2026-01-01T00:00:00Z",
-        dataschema="https://contracts.nabhold.com/pulse/events/v1/insight.published.schema.json",
+        dataschema="https://contracts.baobab-platform.com/pulse/events/v1/insight.published.schema.json",
         baobabscope="tenant",
         correlationid=uuid4(),
         tenantid="tn_acme01",
@@ -62,10 +62,10 @@ def test_platform_scoped_envelope_matches_the_org_schema(validator: Draft202012V
     envelope = PulseEventEnvelope(
         id=uuid4(),
         type=build_event_type("source", "registered"),
-        source="https://engines.nabhold.com/baobab-pulse",
+        source="urn:baobab-platform:service:baobab-pulse",
         subject="src_123",
         time="2026-01-01T00:00:00Z",
-        dataschema="https://contracts.nabhold.com/pulse/events/v1/source.registered.schema.json",
+        dataschema="https://contracts.baobab-platform.com/pulse/events/v1/source.registered.schema.json",
         baobabscope="platform",
         correlationid=uuid4(),
         data={"source_id": "src_123"},
@@ -79,10 +79,10 @@ def test_tenant_scope_without_tenantid_is_rejected_before_it_ever_reaches_the_sc
         PulseEventEnvelope(
             id=uuid4(),
             type=build_event_type("insight", "published"),
-            source="https://engines.nabhold.com/baobab-pulse",
+            source="urn:baobab-platform:service:baobab-pulse",
             subject="ins_123",
             time="2026-01-01T00:00:00Z",
-            dataschema="https://contracts.nabhold.com/pulse/events/v1/insight.published.schema.json",
+            dataschema="https://contracts.baobab-platform.com/pulse/events/v1/insight.published.schema.json",
             baobabscope="tenant",
             correlationid=uuid4(),
             data={},

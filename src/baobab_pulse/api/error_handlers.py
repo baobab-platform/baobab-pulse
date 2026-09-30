@@ -50,7 +50,7 @@ def register_error_handlers(app: FastAPI) -> None:
                 status_code, code, retryable = mapped_status, mapped_code, mapped_retryable
                 break
         problem = ProblemDetails(
-            type=f"https://contracts.nabhold.com/errors/v1/{code.lower()}",
+            type=f"https://contracts.baobab-platform.com/errors/v1/{code.lower()}",
             title=type(exc).__name__,
             status=status_code,
             detail=str(exc),
@@ -68,7 +68,7 @@ def register_error_handlers(app: FastAPI) -> None:
     async def handle_unexpected_error(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("unhandled_exception")
         problem = ProblemDetails(
-            type="https://contracts.nabhold.com/errors/v1/internal_error",
+            type="https://contracts.baobab-platform.com/errors/v1/internal_error",
             title="Internal Server Error",
             status=500,
             detail="An unexpected error occurred.",
