@@ -92,7 +92,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "architecture: enforces module dependency boundaries",
-    "contract: validates payloads against nabhold/shared contract schemas",
+    "contract: validates payloads against baobab-platform/shared contract schemas",
     "provider: requires a real, credentialed model-provider API (opt-in, excluded by default)",
 ]
 # The default test run excludes "provider" tests — see the Makefile's "test" target

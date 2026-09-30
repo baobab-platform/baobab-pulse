@@ -1,5 +1,5 @@
 # Local development topology only (item 115-116): Pulse API + PostgreSQL +
-# Qdrant. Production orchestration belongs to nabhold/infrastructure — this
+# Qdrant. Production orchestration belongs to baobab-platform/infrastructure — this
 # file does not duplicate that, it only makes `docker compose up` a viable
 # local loop for a contributor who wants to exercise the API against real
 # PostgreSQL + Qdrant instead of the in-memory/embedded substitutes the test

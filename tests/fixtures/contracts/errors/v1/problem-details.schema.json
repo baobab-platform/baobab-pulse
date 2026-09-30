@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://contracts.nabhold.com/errors/v1/problem-details.schema.json",
+  "$id": "https://contracts.baobab-platform.com/errors/v1/problem-details.schema.json",
   "title": "Baobab API problem details",
   "description": "RFC 9457 application/problem+json response with stable Baobab diagnostics and retry semantics.",
   "type": "object",
