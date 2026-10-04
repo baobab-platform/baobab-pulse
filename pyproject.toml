@@ -43,6 +43,7 @@ security = [
 ]
 
 [tool.ruff]
+extend-exclude = [".shared-contracts"] # checked as pinned data; Shared owns its source lint policy
 line-length = 110
 target-version = "py314"
 src = ["src", "tests"]
