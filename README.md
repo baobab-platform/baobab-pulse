@@ -187,7 +187,7 @@ tests/
 └── contract/      validates PulseEventEnvelope/ProblemDetails against vendored schemas
 
 docs/
-├── adr/            ARCH-PULSE-001, ARCH-PULSE-CIM-001, ADR-PULSE-001..011
+├── adr/            ARCH-PULSE-001, ARCH-PULSE-CIM-001, ADR-PULSE-001..012
 ├── architecture/    diagrams and the API framework decision
 └── security/        agent/tool security posture
 
@@ -303,14 +303,22 @@ required, a `tenant_context` referencing the Control-Plane-minted tenant id
 
 ## Integration boundaries
 
-- **`baobab-platform/shared`**: canonical event envelope (CloudEvents profile) and
-  RFC 9457 error contract are mirrored field-for-field in
-  `contracts/events.py`/`contracts/errors.py`, validated in CI against
-  vendored copies of the live schemas.
-- **`nabhold/baobab-cp`**: Control Plane owns `CanonicalEntity`,
+- **`baobab-platform/shared`**: canonical event envelope (CloudEvents profile),
+  RFC 9457 error contract, and the platform-level Regulations ↔ Trade Docs ↔
+  Pulse authority boundary (ADR-SHARED-019). Shared contracts are consumed;
+  Pulse does not redefine their authority.
+- **`baobab-platform/baobab-cp`**: Control Plane owns `CanonicalEntity`,
   `ExternalReference`, `Mapping`, `Market`, `DigitalEstate`, `Engine`,
   `Capability`, `Context`, `IsolationProfile` — Pulse references these by
   id, never redefines them.
+- **`baobab-platform/baobab-regulations`**: canonical regulatory meaning,
+  applicability, obligations, classifications and regulatory decisions.
+  Pulse may observe and analyse those facts but does not reproduce their
+  authority (ADR-PULSE-012).
+- **`baobab-platform/baobab-trade-docs`**: canonical trade-document identity,
+  version, documentary provenance, verification workflow, submissions and
+  authority-response state. Pulse may reference these objects as analytical
+  evidence without becoming their owner (ADR-PULSE-012).
 - **MedusaJS / iDempiere / Payload CMS**: consumed through approved
   APIs/events only; direct database coupling is prohibited
   (`PULSE-003`).
