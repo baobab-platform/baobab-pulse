@@ -4,7 +4,9 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from baobab_pulse.application.services import upstream_fact_projection_service as projection_service
+from baobab_pulse.application.services import (
+    upstream_fact_projection_service as projection_service,
+)
 from baobab_pulse.contracts.upstream_events import UpstreamEventEnvelope
 from baobab_pulse.domain.projections import UpstreamFactKind
 from baobab_pulse.domain.shared.errors import InvariantViolation
