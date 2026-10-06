@@ -12,7 +12,6 @@ from baobab_pulse.infrastructure.projections.in_memory_upstream_fact_projection_
     InMemoryUpstreamFactProjectionStore,
 )
 
-
 TENANT = "tn_test01"
 REG_SOURCE = "urn:baobab-platform:service:baobab-regulations"
 DOC_SOURCE = "urn:baobab-platform:service:baobab-trade-docs"
