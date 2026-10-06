@@ -104,8 +104,19 @@ async def test_same_upstream_occurrence_is_idempotent_but_conflicting_replay_fai
         data={**data, "verification_state": "FAILED"},
         event_id=event_id,
     )
-    with pytest.raises(InvariantViolation, match="conflicting payload digest"):
+    with pytest.raises(InvariantViolation, match="conflicting event digest"):
         await service.consume(conflicting)
+
+    # The same canonical (source, id) with unchanged data but a changed
+    # immutable envelope field is also a provenance conflict.
+    changed_time = UpstreamEventEnvelope(
+        **{
+            **event.model_dump(mode="python"),
+            "time": "2026-10-06T12:05:00Z",
+        }
+    )
+    with pytest.raises(InvariantViolation, match="conflicting event digest"):
+        await service.consume(changed_time)
 
 
 async def test_wrong_logical_producer_is_rejected() -> None:
