@@ -45,8 +45,8 @@ class InMemoryOutbox:
 
     @staticmethod
     def _dataschema_for(event_type: str) -> str:
-        entity_verb_version = event_type.removeprefix("com.baobab-platform.pulse.")
-        return f"https://contracts.baobab-platform.com/pulse/events/v1/{entity_verb_version}.schema.json"
+        entity_verb_version = event_type.removeprefix("com.baobab-platform.intelligence.")
+        return f"https://contracts.baobab-platform.com/intelligence/events/v1/{entity_verb_version}.schema.json"
 
 
 def _as_uuid(value: str | None) -> UUID:
