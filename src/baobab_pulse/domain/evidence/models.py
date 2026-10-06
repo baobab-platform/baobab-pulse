@@ -21,7 +21,7 @@ from pydantic import ConfigDict
 from baobab_pulse.domain.shared.base import CanonicalEntity, GovernedEntity
 from baobab_pulse.domain.shared.enums import ConfidenceBand, EvidenceDirection
 from baobab_pulse.domain.shared.errors import InvariantViolation
-from baobab_pulse.domain.shared.value_objects import Reference
+from baobab_pulse.domain.shared.value_objects import CrossEngineObjectReference, Reference
 
 
 class Evidence(CanonicalEntity):
@@ -30,7 +30,7 @@ class Evidence(CanonicalEntity):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
     type: Literal["evidence"] = "evidence"
-    referenced_object: Reference
+    referenced_object: Reference | CrossEngineObjectReference
     role: str | None = None
     relevance: ConfidenceBand = ConfidenceBand.UNKNOWN
     direction: EvidenceDirection = EvidenceDirection.CONTEXTUAL
