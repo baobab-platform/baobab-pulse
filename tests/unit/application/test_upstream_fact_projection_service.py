@@ -57,8 +57,8 @@ async def test_document_verification_is_projected_as_documentary_fact_not_regula
         event_type=projection_service.DOCUMENTS_VERIFICATION,
         source=DOC_SOURCE,
         data={
-            "trade_document_id": "tdoc_01",
-            "document_version_id": "tdocv_01",
+            "trade_document_id": "tdoc_001",
+            "document_version_id": "tdocv_001",
             "tenant_id": TENANT,
             "previous_verification_state": "PENDING",
             "verification_state": "VERIFIED",
@@ -81,8 +81,8 @@ async def test_same_upstream_occurrence_is_idempotent_but_conflicting_replay_fai
     service = projection_service.UpstreamFactProjectionService(projection_port=store)
     event_id = uuid4()
     data = {
-        "trade_document_id": "tdoc_01",
-        "document_version_id": "tdocv_01",
+        "trade_document_id": "tdoc_001",
+        "document_version_id": "tdocv_001",
         "tenant_id": TENANT,
         "verification_state": "VERIFIED",
         "changed_at": "2026-10-06T12:00:00Z",
@@ -122,8 +122,8 @@ async def test_wrong_logical_producer_is_rejected() -> None:
         event_type=projection_service.DOCUMENTS_VERIFICATION,
         source=REG_SOURCE,
         data={
-            "trade_document_id": "tdoc_01",
-            "document_version_id": "tdocv_01",
+            "trade_document_id": "tdoc_001",
+            "document_version_id": "tdocv_001",
             "tenant_id": TENANT,
             "verification_state": "VERIFIED",
             "changed_at": "2026-10-06T12:00:00Z",
@@ -141,8 +141,8 @@ async def test_envelope_and_payload_tenant_must_match() -> None:
         source=DOC_SOURCE,
         tenant_id="tn_other01",
         data={
-            "trade_document_id": "tdoc_01",
-            "document_version_id": "tdocv_01",
+            "trade_document_id": "tdoc_001",
+            "document_version_id": "tdocv_001",
             "tenant_id": TENANT,
             "verification_state": "VERIFIED",
             "changed_at": "2026-10-06T12:00:00Z",
@@ -172,7 +172,7 @@ async def test_regulations_satisfaction_projection_retains_owner_references() ->
                 ),
                 "outcome": "SATISFIED",
                 "accepted_document_version_references": [
-                    _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_01")
+                    _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_001")
                 ],
                 "rejected_evidence": [],
                 "reason_codes": ["DOCUMENT_ACCEPTED"],
@@ -267,8 +267,8 @@ async def test_document_validity_projection_retains_exact_document_version() -> 
         event_type=projection_service.DOCUMENTS_VALIDITY,
         source=DOC_SOURCE,
         data={
-            "trade_document_id": "tdoc_04",
-            "document_version_id": "tdocv_04",
+            "trade_document_id": "tdoc_004",
+            "document_version_id": "tdocv_004",
             "tenant_id": TENANT,
             "previous_temporal_validity_state": "CURRENTLY_VALID",
             "temporal_validity_state": "EXPIRED",
@@ -282,5 +282,5 @@ async def test_document_validity_projection_retains_exact_document_version() -> 
 
     assert result.projection.fact_kind == UpstreamFactKind.DOCUMENT_VALIDITY_CHANGED
     assert result.projection.state_code == "EXPIRED"
-    assert result.projection.references[0].object_id == "tdocv_04"
+    assert result.projection.references[0].object_id == "tdocv_004"
     assert result.projection.references[0].reference_mode.value == "IDENTITY_PINNED"
