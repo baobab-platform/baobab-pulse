@@ -11,9 +11,9 @@ mutated in place.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 from enum import StrEnum
-import re
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, model_validator
