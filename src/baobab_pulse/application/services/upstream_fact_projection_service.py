@@ -272,6 +272,7 @@ class UpstreamFactProjectionService:
     ) -> UpstreamFactProjection:
         return UpstreamFactProjection(
             source_event_id=event.id,
+            source_event_source=event.source,
             source_event_type=event.type,
             source_engine_id=source_engine_id,
             tenant_id=tenant_id,
@@ -280,7 +281,7 @@ class UpstreamFactProjectionService:
             fact_kind=kind,
             references=references,
             state_code=state_code,
-            payload_digest=self._payload_digest(event.data),
+            event_digest=self._event_digest(event),
         )
 
     @staticmethod
@@ -291,8 +292,19 @@ class UpstreamFactProjectionService:
             raise InvariantViolation(f"upstream event payload violates expected Shared contract: {exc}") from exc
 
     @staticmethod
-    def _payload_digest(data: dict[str, Any]) -> str:
-        canonical = json.dumps(data, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    def _event_digest(event: UpstreamEventEnvelope) -> str:
+        """Digest the immutable canonical occurrence, not only event.data.
+
+        Shared defines (source, id) as the delivery identity. Reusing that
+        identity with a changed type, subject, tenant, occurrence time or
+        payload is therefore a provenance conflict and must fail closed.
+        """
+        canonical = json.dumps(
+            event.model_dump(mode="json", exclude_none=True),
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=False,
+        )
         return "sha256:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
     @staticmethod
