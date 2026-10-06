@@ -5,7 +5,10 @@ from uuid import UUID, uuid4
 import pytest
 
 from baobab_pulse.application.services.upstream_fact_projection_service import (
+    DOCUMENTS_EVIDENCE_OFFERED,
+    DOCUMENTS_VALIDITY,
     DOCUMENTS_VERIFICATION,
+    REGULATIONS_REQUIREMENTS,
     REGULATIONS_SATISFACTION,
     UpstreamFactProjectionService,
 )
@@ -182,3 +185,99 @@ async def test_regulations_satisfaction_projection_retains_owner_references() ->
     assert result.projection.state_code == "SATISFIED"
     owners = {reference.owner_engine_id for reference in result.projection.references}
     assert owners == {"baobab-regulations", "baobab-trade-docs"}
+
+
+async def test_regulations_requirements_projection_keeps_decision_and_requirement_refs() -> None:
+    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    decision = _ref("baobab-regulations", "REGULATORY_DECISION", "regdec_02")
+    requirement = _ref("baobab-regulations", "DOCUMENT_REQUIREMENT", "regreq_02")
+    event = _event(
+        event_type=REGULATIONS_REQUIREMENTS,
+        source=REG_SOURCE,
+        data={
+            "tenant_id": TENANT,
+            "requirement_set": {
+                "regulatory_decision_reference": decision,
+                "requirements": [
+                    {
+                        "requirement_reference": requirement,
+                        "regulatory_decision_reference": decision,
+                        "requirement_kind": "DOCUMENT",
+                        "requirement_code": "PHYTOSANITARY_CERTIFICATE_REQUIRED",
+                        "purpose_code": "SPS",
+                        "acceptable_document_types": ["PHYTOSANITARY_CERTIFICATE"],
+                        "required_issuer_roles": ["COMPETENT_AUTHORITY"],
+                        "required_data_elements": ["CONSIGNMENT_REFERENCE"],
+                        "unsatisfied_effect_code": "SPS_HOLD_REQUIRED",
+                        "effective_from": "2026-10-06T00:00:00Z",
+                        "effective_to": None,
+                        "determined_at": "2026-10-06T12:00:00Z",
+                    }
+                ],
+                "legal_time": "2026-10-06T10:00:00Z",
+                "knowledge_time": "2026-10-06T12:00:00Z",
+                "determined_at": "2026-10-06T12:00:00Z",
+            },
+        },
+    )
+
+    result = await service.consume(event)
+
+    assert result.projection.fact_kind == UpstreamFactKind.DOCUMENT_REQUIREMENTS_DETERMINED
+    assert result.projection.state_code == "DETERMINED"
+    assert [reference.object_type for reference in result.projection.references] == [
+        "REGULATORY_DECISION",
+        "DOCUMENT_REQUIREMENT",
+    ]
+
+
+async def test_regulatory_evidence_offered_does_not_become_satisfaction() -> None:
+    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    event = _event(
+        event_type=DOCUMENTS_EVIDENCE_OFFERED,
+        source=DOC_SOURCE,
+        data={
+            "tenant_id": TENANT,
+            "regulatory_decision_reference": _ref(
+                "baobab-regulations", "REGULATORY_DECISION", "regdec_03"
+            ),
+            "requirement_reference": _ref(
+                "baobab-regulations", "DOCUMENT_REQUIREMENT", "regreq_03"
+            ),
+            "document_version_references": [
+                _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_03")
+            ],
+            "offered_at": "2026-10-06T12:00:00Z",
+        },
+    )
+
+    result = await service.consume(event)
+
+    assert result.projection.fact_kind == UpstreamFactKind.REGULATORY_EVIDENCE_OFFERED
+    assert result.projection.state_code == "OFFERED"
+    assert result.projection.state_code != "SATISFIED"
+
+
+async def test_document_validity_projection_retains_exact_document_version() -> None:
+    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    event = _event(
+        event_type=DOCUMENTS_VALIDITY,
+        source=DOC_SOURCE,
+        data={
+            "trade_document_id": "tdoc_04",
+            "document_version_id": "tdocv_04",
+            "tenant_id": TENANT,
+            "previous_temporal_validity_state": "CURRENTLY_VALID",
+            "temporal_validity_state": "EXPIRED",
+            "authority_reference": None,
+            "basis_reference": None,
+            "changed_at": "2026-10-06T12:00:00Z",
+        },
+    )
+
+    result = await service.consume(event)
+
+    assert result.projection.fact_kind == UpstreamFactKind.DOCUMENT_VALIDITY_CHANGED
+    assert result.projection.state_code == "EXPIRED"
+    assert result.projection.references[0].object_id == "tdocv_04"
+    assert result.projection.references[0].reference_mode.value == "IDENTITY_PINNED"
