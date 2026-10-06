@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from baobab_pulse.domain.evidence import Evidence
 from baobab_pulse.domain.shared.value_objects import (
     CrossEngineObjectReference,
     CrossEngineObjectVersion,
@@ -72,3 +73,19 @@ def test_current_reference_rejects_version_and_platform_reference_rejects_tenant
             scope=CrossEngineReferenceScope.PLATFORM,
             tenant_id="tn_test01",
         )
+
+
+def test_evidence_can_contextualise_foreign_object_without_copying_it() -> None:
+    reference = CrossEngineObjectReference(
+        owner_engine_id="baobab-regulations",
+        object_type="REGULATORY_DECISION",
+        object_id="regdec_01",
+        reference_mode=CrossEngineReferenceMode.IDENTITY_PINNED,
+        scope=CrossEngineReferenceScope.TENANT,
+        tenant_id="tn_test01",
+    )
+
+    evidence = Evidence(id="evd_test", referenced_object=reference)
+
+    assert evidence.referenced_object == reference
+    assert not hasattr(evidence, "regulatory_decision")
