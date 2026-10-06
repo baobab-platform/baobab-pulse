@@ -338,6 +338,7 @@ Fields include:
 
 ~~~text
 source_event_id
+source_event_source
 source_event_type
 source_engine_id
 tenant_id
@@ -346,7 +347,7 @@ correlation_id
 fact_kind
 references[]
 state_code?
-payload_digest
+event_digest
 ~~~
 
 ---
@@ -509,24 +510,26 @@ It does not mean evidence was accepted.
 
 Pulse SHALL assume upstream event delivery is at least once.
 
-The deduplication key is:
+The deduplication key follows the Shared CloudEvents envelope exactly:
 
 ~~~text
-(source_engine_id, source_event_id)
+(source_event_source, source_event_id)
 ~~~
 
-A repeated occurrence with the same payload digest is idempotent.
+where `source_event_source` is the canonical logical producer URI.
+
+A repeated occurrence with the same immutable event digest is idempotent.
 
 ---
 
 ## 21. Conflicting Replay
 
-If the same occurrence identity arrives with a different payload digest:
+If the same occurrence identity arrives with a different immutable event digest:
 
 ~~~text
 same source
 same event id
-different canonical payload
+different type / subject / tenant / time / payload / other immutable envelope field
 ~~~
 
 Pulse SHALL reject the replay.
@@ -537,15 +540,19 @@ This preserves provenance integrity.
 
 ---
 
-## 22. Payload Digest
+## 22. Event Digest
 
 RTD-09 computes:
 
 ~~~text
-sha256(canonical-json(data))
+sha256(canonical-json(event envelope, excluding absent optional fields))
 ~~~
 
 for replay conflict detection.
+
+Hashing the complete immutable occurrence rather than only `data` prevents the
+same canonical `(source, id)` from being replayed with a changed event type,
+subject, tenant, occurrence time or payload while appearing idempotent.
 
 The digest is a consumer provenance aid.
 
@@ -872,7 +879,9 @@ RTD-09 SHALL mechanically test:
 7. projection is not a canonical aggregate;
 8. projector imports no HTTP/database/provider SDK;
 9. foreign canonical aggregate classes are absent;
-10. future local event types use `intelligence`, not `pulse`.
+10. future local event types use `intelligence`, not `pulse`;
+11. Pulse's consumer models validate against the pinned RTD-05/06/07/08 Shared schemas;
+12. the pinned Shared commit is the merged ADR-SHARED-025 / RTD-09 governance state.
 
 ---
 
@@ -1055,7 +1064,7 @@ Projection failure does not alter upstream canonical truth.
 ### Costs
 
 - Pulse now carries a second, explicit reference type for cross-engine identity.
-- Consumer mappings must be updated when upstream canonical contracts change.
+- Consumer mappings must be updated when upstream canonical contracts change; the repository now pins and vendors the RTD-05/06/07/08 schemas so such drift is explicit.
 - A production projection store and event subscription runtime are still required.
 - Capability census remains additional work.
 - Future intelligence event activation remains additional governance.
