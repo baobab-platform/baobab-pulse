@@ -77,7 +77,10 @@ jobs:
         run: uv sync --locked --all-groups
 
       - name: Lint (ruff)
-        run: uv run ruff check .
+        run: |
+          uv run ruff check . --fix
+          git diff --check
+          git diff --exit-code
 
       - name: Type-check (mypy --strict)
         run: uv run mypy src
