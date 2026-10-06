@@ -121,7 +121,7 @@ def test_regulations_satisfaction_payload_matches_pinned_shared_schema() -> None
                 ).model_dump(mode="json"),
                 "outcome": "SATISFIED",
                 "accepted_document_version_references": [
-                    _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_01").model_dump(
+                    _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_001").model_dump(
                         mode="json"
                     )
                 ],
@@ -150,7 +150,7 @@ def test_trade_docs_evidence_offered_payload_matches_pinned_shared_schema() -> N
                 "baobab-regulations", "DOCUMENT_REQUIREMENT", "regreq_01"
             ).model_dump(mode="json"),
             "document_version_references": [
-                _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_01").model_dump(mode="json")
+                _ref("baobab-trade-docs", "DOCUMENT_VERSION", "tdocv_001").model_dump(mode="json")
             ],
             "offered_at": "2026-10-06T12:00:00Z",
         }
@@ -169,8 +169,8 @@ def test_trade_docs_evidence_offered_payload_matches_pinned_shared_schema() -> N
             DocumentVersionVerificationChangedData,
             "/$defs/documentVersionVerificationChangedEventData",
             {
-                "trade_document_id": "tdoc_01",
-                "document_version_id": "tdocv_01",
+                "trade_document_id": "tdoc_001",
+                "document_version_id": "tdocv_001",
                 "tenant_id": TENANT,
                 "previous_verification_state": "PENDING",
                 "verification_state": "VERIFIED",
@@ -182,8 +182,8 @@ def test_trade_docs_evidence_offered_payload_matches_pinned_shared_schema() -> N
             DocumentVersionValidityChangedData,
             "/$defs/documentVersionValidityChangedEventData",
             {
-                "trade_document_id": "tdoc_01",
-                "document_version_id": "tdocv_01",
+                "trade_document_id": "tdoc_001",
+                "document_version_id": "tdocv_001",
                 "tenant_id": TENANT,
                 "previous_temporal_validity_state": "CURRENTLY_VALID",
                 "temporal_validity_state": "EXPIRED",
@@ -212,7 +212,7 @@ def test_consumer_rejects_shapes_shared_rejects() -> None:
         DocumentVersionVerificationChangedData.model_validate(
             {
                 "trade_document_id": "wrong_01",
-                "document_version_id": "tdocv_01",
+                "document_version_id": "tdocv_001",
                 "tenant_id": TENANT,
                 "verification_state": "VERIFIED",
                 "changed_at": "2026-10-06T12:00:00Z",
