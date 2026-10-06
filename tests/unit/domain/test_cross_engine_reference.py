@@ -12,6 +12,17 @@ from baobab_pulse.domain.shared.value_objects import (
 )
 
 
+def test_reference_uses_shared_provider_neutral_engine_id_grammar() -> None:
+    reference = CrossEngineObjectReference(
+        owner_engine_id="external-policy-engine",
+        object_type="POLICY_DECISION",
+        object_id="decision_01",
+        reference_mode=CrossEngineReferenceMode.IDENTITY_PINNED,
+        scope=CrossEngineReferenceScope.PLATFORM,
+    )
+    assert reference.owner_engine_id == "external-policy-engine"
+
+
 def test_tenant_identity_pinned_reference_matches_shared_semantics() -> None:
     reference = CrossEngineObjectReference(
         owner_engine_id="baobab-trade-docs",
