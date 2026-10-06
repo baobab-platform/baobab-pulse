@@ -16,7 +16,6 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from baobab_pulse.contracts.events import PulseEventEnvelope
 from baobab_pulse.domain.shared.value_objects import CrossEngineObjectReference
 
-
 TenantId = Annotated[str, Field(pattern=r"^tn_[a-z0-9]+$", min_length=6, max_length=63)]
 TradeDocumentId = Annotated[str, Field(pattern=r"^tdoc_[a-z0-9]+$", min_length=8, max_length=63)]
 DocumentVersionId = Annotated[str, Field(pattern=r"^tdocv_[a-z0-9]+$", min_length=9, max_length=63)]
