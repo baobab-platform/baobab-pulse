@@ -24,16 +24,16 @@ class InMemoryUpstreamFactProjectionStore:
             self._items[key] = projection
             return True
 
-        if existing.payload_digest != projection.payload_digest:
+        if existing.event_digest != projection.event_digest:
             raise InvariantViolation(
-                "same upstream event occurrence identity replayed with a conflicting payload digest"
+                "same upstream event occurrence identity replayed with a conflicting event digest"
             )
         return False
 
     async def get(
-        self, *, source_engine_id: str, source_event_id: UUID
+        self, *, source_event_source: str, source_event_id: UUID
     ) -> UpstreamFactProjection | None:
-        return self._items.get((source_engine_id, source_event_id))
+        return self._items.get((source_event_source, source_event_id))
 
     def values(self) -> tuple[UpstreamFactProjection, ...]:
         """Test/reference inspection only; not a canonical domain query API."""
