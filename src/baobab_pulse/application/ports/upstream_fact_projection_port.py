@@ -13,13 +13,14 @@ class UpstreamFactProjectionPort(Protocol):
         """Persist projection if event occurrence is new.
 
         Returns True when inserted, False for an idempotent replay of the exact
-        same occurrence/payload. Implementations must fail closed if the same
-        occurrence identity is replayed with a conflicting payload digest.
+        same occurrence. Implementations deduplicate by canonical CloudEvents
+        (source, id) and must fail closed if that occurrence is replayed with a
+        conflicting immutable event digest.
         """
         ...
 
     async def get(
-        self, *, source_engine_id: str, source_event_id: UUID
+        self, *, source_event_source: str, source_event_id: UUID
     ) -> UpstreamFactProjection | None:
-        """Return one projection by canonical (source engine, event id)."""
+        """Return one projection by canonical CloudEvents (source, id)."""
         ...
