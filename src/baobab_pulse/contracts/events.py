@@ -35,7 +35,7 @@ issued (INV-PULSE-004)."""
 
 
 class PulseEventEnvelope(BaseModel):
-    """A ``com.baobab-platform.pulse.<entity>.<verb>.vN`` cross-engine event."""
+    """A local Pulse envelope for a future ``com.baobab-platform.intelligence.<entity>.<verb>.vN`` event. RTD-09 reserves the intelligence context but activates no producer event."""
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -92,9 +92,13 @@ class PulseEventEnvelope(BaseModel):
 
 
 def build_event_type(entity: str, verb: str, *, version: int = 1) -> str:
-    """Build a ``com.baobab-platform.pulse.<entity>.<verb>.vN`` event type string,
-    validating it against the same pattern the envelope enforces."""
-    event_type = f"com.baobab-platform.pulse.{entity}.{verb}.v{version}"
+    """Build a future ``com.baobab-platform.intelligence.<entity>.<verb>.vN`` type.
+
+    Shared currently reserves, but does not activate, the intelligence event
+    context. This helper is therefore local scaffold only until a future
+    Shared event-registration decision lands.
+    """
+    event_type = f"com.baobab-platform.intelligence.{entity}.{verb}.v{version}"
     if not _TYPE_PATTERN.match(event_type):
         raise ValueError(f"constructed event type {event_type!r} does not match the org's event-type pattern")
     return event_type
