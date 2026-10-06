@@ -34,6 +34,7 @@ class UpstreamFactProjection(ValueObject):
     """Minimal, rebuildable analytical read model of one upstream event."""
 
     source_event_id: UUID
+    source_event_source: str
     source_event_type: str
     source_engine_id: str
     tenant_id: str
@@ -42,16 +43,18 @@ class UpstreamFactProjection(ValueObject):
     fact_kind: UpstreamFactKind
     references: tuple[CrossEngineObjectReference, ...]
     state_code: str | None = None
-    payload_digest: str
+    event_digest: str
 
     @model_validator(mode="after")
     def _projection_invariants(self) -> UpstreamFactProjection:
         if not self.source_engine_id.startswith("baobab-"):
             raise ValueError("source_engine_id must be a Baobab engine identity")
+        if not self.source_event_source.startswith("urn:baobab-platform:service:"):
+            raise ValueError("source_event_source must retain the canonical logical producer URI")
         if not self.source_event_type.startswith("com.baobab-platform."):
             raise ValueError("source_event_type must be a canonical Baobab event type")
-        if not self.payload_digest.startswith("sha256:") or len(self.payload_digest) != 71:
-            raise ValueError("payload_digest must be a sha256:<64-hex> digest")
+        if not self.event_digest.startswith("sha256:") or len(self.event_digest) != 71:
+            raise ValueError("event_digest must be a sha256:<64-hex> digest")
         if not self.references:
             raise ValueError("an upstream fact projection must retain at least one owner reference")
         for reference in self.references:
@@ -63,4 +66,4 @@ class UpstreamFactProjection(ValueObject):
     def dedupe_key(self) -> tuple[str, UUID]:
         """Canonical at-least-once delivery identity: (logical source, event id)."""
 
-        return (self.source_engine_id, self.source_event_id)
+        return (self.source_event_source, self.source_event_id)
