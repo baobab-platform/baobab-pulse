@@ -304,21 +304,25 @@ required, a `tenant_context` referencing the Control-Plane-minted tenant id
 ## Integration boundaries
 
 - **`baobab-platform/shared`**: canonical event envelope (CloudEvents profile),
-  RFC 9457 error contract, and the platform-level Regulations ↔ Trade Docs ↔
-  Pulse authority boundary (ADR-SHARED-019). Shared contracts are consumed;
-  Pulse does not redefine their authority.
+  RFC 9457 errors, RTD-05 cross-engine references, and the platform-level
+  Regulations ↔ Trade Docs ↔ Pulse authority boundary. ADR-SHARED-025
+  establishes `intelligence` as the capability domain and reserves the future
+  `intelligence` event context for Pulse; RTD-09 catalogues no capability
+  and activates no Pulse-produced event.
 - **`baobab-platform/baobab-cp`**: Control Plane owns `CanonicalEntity`,
   `ExternalReference`, `Mapping`, `Market`, `DigitalEstate`, `Engine`,
   `Capability`, `Context`, `IsolationProfile` — Pulse references these by
   id, never redefines them.
 - **`baobab-platform/baobab-regulations`**: canonical regulatory meaning,
   applicability, obligations, classifications and regulatory decisions.
-  Pulse may observe and analyse those facts but does not reproduce their
-  authority (ADR-PULSE-012).
+  RTD-09 consumes the ACTIVE requirements-determined and
+  requirement-satisfaction-evaluated facts asynchronously into rebuildable
+  owner-preserving projections; Pulse never becomes their authority.
 - **`baobab-platform/baobab-trade-docs`**: canonical trade-document identity,
-  version, documentary provenance, verification workflow, submissions and
-  authority-response state. Pulse may reference these objects as analytical
-  evidence without becoming their owner (ADR-PULSE-012).
+  version, documentary provenance and verification/validity state. RTD-09
+  consumes selected ACTIVE document facts and regulatory-evidence-offered
+  events through exact `DOCUMENT_VERSION` references. VERIFIED never means
+  regulatory SATISFIED inside Pulse.
 - **MedusaJS / iDempiere / Payload CMS**: consumed through approved
   APIs/events only; direct database coupling is prohibited
   (`PULSE-003`).
@@ -327,7 +331,8 @@ required, a `tenant_context` referencing the Control-Plane-minted tenant id
 
 Implemented and tested: the canonical domain model (all fifteen
 ADR-PULSE-002 aggregates plus `ResearchMission`/`Claim`), application ports
-and services, the Haystack anti-corruption layer with a deterministic
+and services, the RTD-09 owner-preserving cross-engine reference and upstream
+fact-projection path, the Haystack anti-corruption layer with a deterministic
 reference pipeline, a minimal headless API including `/evidence/search`,
 `SourceAdapter` + reference/normalisation ingestion, PostgreSQL connectivity
 plus a minimal canonical schema and repository for `EvidenceSet`, a Qdrant
@@ -337,16 +342,22 @@ rebuild CLI, the transactional outbox, and CI security/quality gates
 (now provisioning PostgreSQL and Qdrant service containers).
 
 Not yet implemented (deliberately, per the platform brief's "no premature
-business code/infrastructure"): the full physical PostgreSQL schema for
-every aggregate beyond `EvidenceSet`, a real (non-mock) embedding provider,
+business code/infrastructure"): a production event subscription/relay and
+persistent RTD-09 upstream-projection store, any catalogued
+`intelligence.*` capability or ACTIVE Pulse-produced event, the full physical
+PostgreSQL schema for every aggregate beyond `EvidenceSet`, a real
+(non-mock) embedding provider,
 a real (non-reference) source adapter, a worker/scheduler deployment role,
 entity resolution, any production intelligence domain (FX, commodities,
 weather, trade statistics, ...), and any Haystack `Agent` instantiation.
 
 ## Roadmap
 
-See `docs/adr/Baobab Pulse Intelligence Engine.md` §97-98 for the full ADR
-family and derived-contract roadmap this scaffold works toward.
+See `ADR-PULSE-013` for the RTD-09 consumer/projection boundary and
+`docs/adr/Baobab Pulse Intelligence Engine.md` §97-98 for the broader ADR
+family. The next platform increment is RTD-10 cross-repository conformance;
+the later intelligence capability census will determine which implemented
+Pulse abilities deserve canonical Shared capability keys.
 
 ## Contributing
 
