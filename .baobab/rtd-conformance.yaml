@@ -1,0 +1,27 @@
+schema: baobab-rtd-conformance
+version: "1.0"
+programme: RTD-10
+repository:
+  id: baobab-pulse
+  role: INTELLIGENCE_CONSUMER
+  maturity: IMPLEMENTED_CONSUMER
+shared:
+  repository: baobab-platform/shared
+  commit: "6e0267572edb533ce781b2a7fc6863918ca2d62e"
+  required_contracts:
+    - contracts/control-plane/v1/domain.schema.json
+    - contracts/cross-engine-reference/v1/domain.schema.json
+    - contracts/events/v1/envelope.schema.json
+    - contracts/regulatory-document-exchange/v1/domain.schema.json
+    - contracts/regulatory-document-exchange/v1/events.schema.json
+    - contracts/trade-document/v2/domain.schema.json
+    - contracts/trade-document/v2/events.schema.json
+evidence:
+  adr_paths:
+    - docs/adr/ADR-PULSE-013 — Upstream Intelligence Projection, Cross-Engine Reference and Non-Enforcement Consumer Architecture.md
+  source_paths:
+    - src/baobab_pulse/application/services/upstream_fact_projection_service.py
+    - src/baobab_pulse/domain/projections/models.py
+  test_paths:
+    - tests/architecture/test_rtd09_boundaries.py
+    - tests/contract/test_rtd09_upstream_contracts.py
