@@ -4,14 +4,7 @@ from uuid import UUID, uuid4
 
 import pytest
 
-from baobab_pulse.application.services.upstream_fact_projection_service import (
-    DOCUMENTS_EVIDENCE_OFFERED,
-    DOCUMENTS_VALIDITY,
-    DOCUMENTS_VERIFICATION,
-    REGULATIONS_REQUIREMENTS,
-    REGULATIONS_SATISFACTION,
-    UpstreamFactProjectionService,
-)
+from baobab_pulse.application.services import upstream_fact_projection_service as projection_service
 from baobab_pulse.contracts.upstream_events import UpstreamEventEnvelope
 from baobab_pulse.domain.projections import UpstreamFactKind
 from baobab_pulse.domain.shared.errors import InvariantViolation
@@ -60,9 +53,9 @@ def _event(
 
 async def test_document_verification_is_projected_as_documentary_fact_not_regulatory_satisfaction() -> None:
     store = InMemoryUpstreamFactProjectionStore()
-    service = UpstreamFactProjectionService(projection_port=store)
+    service = projection_service.UpstreamFactProjectionService(projection_port=store)
     event = _event(
-        event_type=DOCUMENTS_VERIFICATION,
+        event_type=projection_service.DOCUMENTS_VERIFICATION,
         source=DOC_SOURCE,
         data={
             "trade_document_id": "tdoc_01",
@@ -86,7 +79,7 @@ async def test_document_verification_is_projected_as_documentary_fact_not_regula
 
 async def test_same_upstream_occurrence_is_idempotent_but_conflicting_replay_fails_closed() -> None:
     store = InMemoryUpstreamFactProjectionStore()
-    service = UpstreamFactProjectionService(projection_port=store)
+    service = projection_service.UpstreamFactProjectionService(projection_port=store)
     event_id = uuid4()
     data = {
         "trade_document_id": "tdoc_01",
@@ -96,7 +89,7 @@ async def test_same_upstream_occurrence_is_idempotent_but_conflicting_replay_fai
         "changed_at": "2026-10-06T12:00:00Z",
     }
 
-    event = _event(event_type=DOCUMENTS_VERIFICATION, source=DOC_SOURCE, data=data, event_id=event_id)
+    event = _event(event_type=projection_service.DOCUMENTS_VERIFICATION, source=DOC_SOURCE, data=data, event_id=event_id)
     first = await service.consume(event)
     second = await service.consume(event)
 
@@ -104,7 +97,7 @@ async def test_same_upstream_occurrence_is_idempotent_but_conflicting_replay_fai
     assert second.created is False
 
     conflicting = _event(
-        event_type=DOCUMENTS_VERIFICATION,
+        event_type=projection_service.DOCUMENTS_VERIFICATION,
         source=DOC_SOURCE,
         data={**data, "verification_state": "FAILED"},
         event_id=event_id,
@@ -114,9 +107,9 @@ async def test_same_upstream_occurrence_is_idempotent_but_conflicting_replay_fai
 
 
 async def test_wrong_logical_producer_is_rejected() -> None:
-    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    service = projection_service.UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
     event = _event(
-        event_type=DOCUMENTS_VERIFICATION,
+        event_type=projection_service.DOCUMENTS_VERIFICATION,
         source=REG_SOURCE,
         data={
             "trade_document_id": "tdoc_01",
@@ -132,9 +125,9 @@ async def test_wrong_logical_producer_is_rejected() -> None:
 
 
 async def test_envelope_and_payload_tenant_must_match() -> None:
-    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    service = projection_service.UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
     event = _event(
-        event_type=DOCUMENTS_VERIFICATION,
+        event_type=projection_service.DOCUMENTS_VERIFICATION,
         source=DOC_SOURCE,
         tenant_id="tn_other01",
         data={
@@ -151,9 +144,9 @@ async def test_envelope_and_payload_tenant_must_match() -> None:
 
 
 async def test_regulations_satisfaction_projection_retains_owner_references() -> None:
-    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    service = projection_service.UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
     event = _event(
-        event_type=REGULATIONS_SATISFACTION,
+        event_type=projection_service.REGULATIONS_SATISFACTION,
         source=REG_SOURCE,
         data={
             "tenant_id": TENANT,
@@ -188,11 +181,11 @@ async def test_regulations_satisfaction_projection_retains_owner_references() ->
 
 
 async def test_regulations_requirements_projection_keeps_decision_and_requirement_refs() -> None:
-    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    service = projection_service.UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
     decision = _ref("baobab-regulations", "REGULATORY_DECISION", "regdec_02")
     requirement = _ref("baobab-regulations", "DOCUMENT_REQUIREMENT", "regreq_02")
     event = _event(
-        event_type=REGULATIONS_REQUIREMENTS,
+        event_type=projection_service.REGULATIONS_REQUIREMENTS,
         source=REG_SOURCE,
         data={
             "tenant_id": TENANT,
@@ -232,9 +225,9 @@ async def test_regulations_requirements_projection_keeps_decision_and_requiremen
 
 
 async def test_regulatory_evidence_offered_does_not_become_satisfaction() -> None:
-    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    service = projection_service.UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
     event = _event(
-        event_type=DOCUMENTS_EVIDENCE_OFFERED,
+        event_type=projection_service.DOCUMENTS_EVIDENCE_OFFERED,
         source=DOC_SOURCE,
         data={
             "tenant_id": TENANT,
@@ -259,9 +252,9 @@ async def test_regulatory_evidence_offered_does_not_become_satisfaction() -> Non
 
 
 async def test_document_validity_projection_retains_exact_document_version() -> None:
-    service = UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
+    service = projection_service.UpstreamFactProjectionService(projection_port=InMemoryUpstreamFactProjectionStore())
     event = _event(
-        event_type=DOCUMENTS_VALIDITY,
+        event_type=projection_service.DOCUMENTS_VALIDITY,
         source=DOC_SOURCE,
         data={
             "trade_document_id": "tdoc_04",
