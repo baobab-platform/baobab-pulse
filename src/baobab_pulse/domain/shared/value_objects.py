@@ -149,7 +149,7 @@ class CrossEngineObjectVersion(ValueObject):
         return self
 
 
-_ENGINE_ID = re.compile(r"^baobab-[a-z][a-z0-9-]*$")
+_ENGINE_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 _OBJECT_TYPE = re.compile(r"^[A-Z][A-Z0-9_]{1,95}$")
 _OBJECT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 _TENANT_ID = re.compile(r"^tn_[a-z0-9]+$")
@@ -172,8 +172,8 @@ class CrossEngineObjectReference(ValueObject):
 
     @model_validator(mode="after")
     def _shared_contract_invariants(self) -> CrossEngineObjectReference:
-        if not _ENGINE_ID.fullmatch(self.owner_engine_id):
-            raise ValueError("owner_engine_id must use the canonical baobab-<engine> grammar")
+        if not (3 <= len(self.owner_engine_id) <= 63) or not _ENGINE_ID.fullmatch(self.owner_engine_id):
+            raise ValueError("owner_engine_id must satisfy the canonical Shared engineId grammar")
         if not _OBJECT_TYPE.fullmatch(self.object_type):
             raise ValueError("object_type must use the canonical uppercase semantic-code grammar")
         if not (1 <= len(self.object_id) <= 160) or not _OBJECT_ID.fullmatch(self.object_id):
