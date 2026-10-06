@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/regulatory-document-exchange/v1/events.schema.json",
+  "title": "RTD-06 planned cross-engine event payloads",
+  "description": "Payloads defined by RTD-06 but deliberately not activated in AsyncAPI/event-registry until RTD-07/RTD-08.",
+  "$defs": {
+    "documentRequirementsDeterminedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "requirement_set"
+      ],
+      "properties": {
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "requirement_set": {
+          "$ref": "domain.schema.json#/$defs/regulatoryDocumentRequirementSet"
+        }
+      }
+    },
+    "documentRegulatoryEvidenceOfferedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "regulatory_decision_reference",
+        "requirement_reference",
+        "document_version_references",
+        "offered_at"
+      ],
+      "properties": {
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "regulatory_decision_reference": {
+          "$ref": "domain.schema.json#/$defs/regulatoryDecisionReference"
+        },
+        "requirement_reference": {
+          "$ref": "domain.schema.json#/$defs/regulatoryRequirementReference"
+        },
+        "document_version_references": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "domain.schema.json#/$defs/documentVersionReference"
+          }
+        },
+        "offered_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Trade Docs fact: specific pinned DocumentVersions were offered against a Regulations requirement. It is not a request to evaluate and does not imply satisfaction."
+    },
+    "requirementSatisfactionEvaluatedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tenant_id",
+        "result"
+      ],
+      "properties": {
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "result": {
+          "$ref": "domain.schema.json#/$defs/documentEvidenceAssessmentResult"
+        }
+      }
+    }
+  }
+}

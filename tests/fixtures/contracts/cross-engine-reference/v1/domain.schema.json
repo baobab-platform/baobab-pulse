@@ -1,0 +1,215 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/cross-engine-reference/v1/domain.schema.json",
+  "title": "Baobab Cross-Engine Object Reference v1",
+  "description": "Portable authority-preserving reference to a canonical Baobab object owned by another engine. Distinct from Control Plane CanonicalEntity identity and ADR-SHARED-013 ExternalReference native-system identity.",
+  "$defs": {
+    "objectType": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,95}$",
+      "description": "Stable semantic type name within the owner engine's namespace. The pair (owner_engine_id, object_type) defines the type namespace. This base contract is intentionally extensible; domain contracts SHOULD narrow it with const/enum where a specific type is required."
+    },
+    "objectId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$",
+      "minLength": 1,
+      "maxLength": 160,
+      "description": "Durable canonical domain identifier minted or governed by the owning engine. This grammar does not make the value a Control Plane CanonicalEntity ID."
+    },
+    "referenceScope": {
+      "type": "string",
+      "enum": [
+        "platform",
+        "tenant"
+      ],
+      "description": "Authority scope of the referenced object. Tenant-scoped references carry the authoritative Control Plane tenant_id; platform references must not invent one."
+    },
+    "referenceMode": {
+      "type": "string",
+      "enum": [
+        "CURRENT",
+        "IDENTITY_PINNED",
+        "VERSION_PINNED"
+      ],
+      "description": "CURRENT resolves according to the owner's current object state. IDENTITY_PINNED means object_id itself names an immutable historical object/version. VERSION_PINNED means the stable object_id plus object_version identifies the historical state."
+    },
+    "versionKind": {
+      "type": "string",
+      "enum": [
+        "VERSION",
+        "REVISION",
+        "SEQUENCE",
+        "ETAG",
+        "CONTENT_HASH",
+        "OTHER"
+      ],
+      "description": "How the owner identifies the referenced historical state. Consumers treat the value as opaque and must not reinterpret the owner's version semantics."
+    },
+    "objectVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "value"
+      ],
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/versionKind"
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Opaque owner-defined version/revision value. It is compared and resolved according to the owning engine's semantics, not by the consumer."
+        }
+      }
+    },
+    "crossEngineObjectReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "owner_engine_id",
+        "object_type",
+        "object_id",
+        "reference_mode",
+        "scope"
+      ],
+      "properties": {
+        "owner_engine_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/engineId",
+          "description": "Registered engine that owns canonical domain authority for the referenced object. This is the stable engine/service identity, not a deployment/engine_instance_id and not an external system namespace. Schema validates the canonical engineId grammar; runtime use must also establish that the engine is registered."
+        },
+        "object_type": {
+          "$ref": "#/$defs/objectType"
+        },
+        "object_id": {
+          "$ref": "#/$defs/objectId"
+        },
+        "reference_mode": {
+          "$ref": "#/$defs/referenceMode"
+        },
+        "object_version": {
+          "$ref": "#/$defs/objectVersion"
+        },
+        "scope": {
+          "$ref": "#/$defs/referenceScope"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId",
+          "description": "Required exactly when scope=tenant. A reference never grants cross-tenant access; authorisation remains a separate decision."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "scope": {
+                "const": "tenant"
+              }
+            },
+            "required": [
+              "scope"
+            ]
+          },
+          "then": {
+            "required": [
+              "tenant_id"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "tenant_id"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "reference_mode": {
+                "const": "VERSION_PINNED"
+              }
+            },
+            "required": [
+              "reference_mode"
+            ]
+          },
+          "then": {
+            "required": [
+              "object_version"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "object_version"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "Minimal portable reference. It contains identity, owner, scope and pinning semantics only; it carries no foreign domain payload, provider/native-system identity, engine instance, permission or arbitrary metadata."
+    },
+    "pinnedCrossEngineObjectReference": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/crossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "reference_mode": {
+              "enum": [
+                "IDENTITY_PINNED",
+                "VERSION_PINNED"
+              ]
+            }
+          }
+        }
+      ],
+      "description": "A reference safe as the identity component of historical replay/evidence when the owning domain's immutability/version semantics are also satisfied. Domain contracts SHOULD require this form for consequential historical decisions."
+    },
+    "currentCrossEngineObjectReference": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/crossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "reference_mode": {
+              "const": "CURRENT"
+            }
+          }
+        }
+      ],
+      "description": "A deliberately dynamic reference to the owner's current object state. It must not be silently treated as a historical snapshot."
+    },
+    "crossEngineReferenceObservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reference",
+        "observed_at"
+      ],
+      "properties": {
+        "reference": {
+          "$ref": "#/$defs/crossEngineObjectReference"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the consumer observed or captured this reference in its own workflow."
+        },
+        "resolved_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the owning object was last successfully resolved, if resolution occurred. This is observation metadata, not part of object identity or version."
+        }
+      },
+      "description": "Consumer-side observation metadata wrapped around a reference. Keeping time outside the identity value prevents resolution timestamps from becoming false identity/version semantics."
+    }
+  }
+}
