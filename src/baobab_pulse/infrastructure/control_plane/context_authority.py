@@ -44,9 +44,9 @@ class ClientCredentialsTokenProvider:
         timeout_seconds: float = 5.0,
         early_refresh_seconds: int = 30,
     ) -> None:
-        if not token_url.strip() or not client_id.strip() or not client_secret:
-            raise ValueError("token_url, client_id and client_secret are required")
-        self._token_url = token_url
+        if not client_id.strip() or not client_secret:
+            raise ValueError("client_id and client_secret are required")
+        self._token_url = _validated_http_endpoint(token_url, name="token_url")
         self._client_id = client_id
         self._client_secret = client_secret
         self._scope = scope
@@ -87,7 +87,7 @@ class ClientCredentialsTokenProvider:
                 },
             )
             try:
-                with urllib.request.urlopen(  # noqa: S310 -- URL is trusted deployment configuration
+                with urllib.request.urlopen(  # nosec B310 -- URL validated by _validated_http_endpoint
                     request,
                     timeout=self._timeout_seconds,
                 ) as response:
@@ -132,9 +132,10 @@ class HttpControlPlaneContextAuthority:
         validator_tokens: ClientCredentialsTokenProvider,
         timeout_seconds: float = 5.0,
     ) -> None:
-        if not validation_url.strip():
-            raise ValueError("validation_url is required")
-        self._validation_url = validation_url
+        self._validation_url = _validated_http_endpoint(
+            validation_url,
+            name="validation_url",
+        )
         self._validator_tokens = validator_tokens
         self._timeout_seconds = timeout_seconds
 
@@ -248,6 +249,29 @@ class HttpControlPlaneContextAuthority:
             organisation_id=organisation_id,
             market_id=market_id,
         )
+
+
+def _validated_http_endpoint(value: str, *, name: str) -> str:
+    """Permit only explicit HTTP(S) authority endpoints.
+
+    Local/dev deployments may use HTTP; production deployment policy can require
+    HTTPS at configuration admission. Userinfo and fragments are never valid
+    authority endpoints and custom/file schemes are rejected before urlopen.
+    """
+
+    candidate = value.strip()
+    parsed = urllib.parse.urlsplit(candidate)
+    if (
+        parsed.scheme not in {"http", "https"}
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+    ):
+        raise ValueError(
+            f"{name} must be an absolute HTTP(S) URL without userinfo or fragment"
+        )
+    return candidate
 
 
 def _read_json_object(raw: bytes) -> Mapping[str, Any]:
