@@ -131,19 +131,17 @@ async def test_oidc_authenticator_verifies_canonical_workload_claims() -> None:
 
 
 @pytest.mark.parametrize(
-    ("claims", "reason"),
+    "claims",
     [
-        ({"aud": "baobab-control-plane"}, "wrong audience"),
-        ({"actor_type": "human"}, "wrong actor"),
-        ({"exp": int(time.time()) + 3600}, "excessive lifetime"),
+        {"aud": "baobab-control-plane"},
+        {"actor_type": "human"},
+        {"exp": int(time.time()) + 3600},
     ],
 )
 async def test_oidc_authenticator_fails_closed_on_invalid_authority(
     claims: dict[str, object],
-    reason: str,
 ) -> None:
-    with pytest.raises(WorkloadAuthenticationError), pytest.MonkeyPatch.context():
-        del reason
+    with pytest.raises(WorkloadAuthenticationError):
         await _authenticator().authenticate(_token(**claims))
 
 
