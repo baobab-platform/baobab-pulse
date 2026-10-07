@@ -1,10 +1,11 @@
 # .baobab/capability-provider.yaml
 #
-# P-CAP-07 evidence-backed provider-readiness declaration.
+# P-CAP-08 certification-handoff provider declaration.
 #
 # Shared owns capability vocabulary and contract semantics. This repository
-# declares implementation evidence only. IMPLEMENTED is not certification,
-# activation, binding, grant, health, routing or production entitlement.
+# declares implementation evidence only. Shared may admit the canonical
+# capabilities to ACTIVE lifecycle, but IMPLEMENTED is still not certification,
+# provider activation, binding, grant, health, routing or production entitlement.
 
 schema:
   name: baobab-capability-provider-declaration
@@ -18,13 +19,14 @@ providers:
     name: Baobab Pulse core provider
     description: >-
       First-party provider for canonical Intelligence evidence search and
-      research-mission management. P-CAP-07 closes the repository-readiness
+      research-mission management. P-CAP-07 closed the repository-readiness
       gaps left by PARTIAL support: standards-based workload-token verification,
       caller-bound Control Plane context validation, exact Intelligence
       operation scopes, explicit CONFIDENTIAL/RESTRICTED clearance, production
       composition wiring, durable canonical persistence and integration
-      evidence. The ResearchMission event candidate remains HELD_UNREGISTERED
-      and provider activation remains P-CAP-08.
+      evidence. P-CAP-08 adopts Shared EA-09 certification governance without
+      self-certifying or self-activating this provider. The ResearchMission event
+      candidate remains HELD_UNREGISTERED.
     provider_type: BAOBAB_ENGINE
     implementation_key: core
     simulated: false
@@ -43,8 +45,8 @@ providers:
         provenance:
           authority:
             repository: baobab-platform/shared
-            decision: ADR-SHARED-031
-          source_revision: 363e0ead9ebb5aa87f5f813b63b785b7f63cc39e
+            decision: ADR-SHARED-032
+          source_revision: f61de9c5141e432b32cc3b585aafa7d1b6727716
         implementation_evidence:
           - type: source
             path: src/baobab_pulse/infrastructure/authentication/oidc_jwks.py
@@ -83,8 +85,8 @@ providers:
         provenance:
           authority:
             repository: baobab-platform/shared
-            decision: ADR-SHARED-031
-          source_revision: 363e0ead9ebb5aa87f5f813b63b785b7f63cc39e
+            decision: ADR-SHARED-032
+          source_revision: f61de9c5141e432b32cc3b585aafa7d1b6727716
         implementation_evidence:
           - type: source
             path: src/baobab_pulse/infrastructure/authentication/oidc_jwks.py
