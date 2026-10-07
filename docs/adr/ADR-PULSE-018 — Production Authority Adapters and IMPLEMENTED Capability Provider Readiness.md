@@ -206,6 +206,7 @@ Behavior is environment-sensitive but fail closed:
 | non-production, no authority config | canonical runtime omitted; routes remain 503 |
 | any environment, partially configured authority | startup fails |
 | production, missing authority config | startup fails |
+| production, any IAM/CP authority endpoint is not HTTPS | startup fails |
 | fully configured | concrete IAM + CP adapters are composed |
 
 This means a production process can no longer start while silently serving a
@@ -306,16 +307,19 @@ non-disclosing.
 **PULSE-READY-008** — Production authority configuration is complete or startup
 fails closed.
 
-**PULSE-READY-009** — Subject-token evidence is never logged, persisted,
+**PULSE-READY-009** — Production IAM/JWKS/token and Control Plane authority
+endpoints use HTTPS; plain HTTP authority configuration fails startup.
+
+**PULSE-READY-010** — Subject-token evidence is never logged, persisted,
 traced or echoed in errors.
 
-**PULSE-READY-010** — Both first-census capabilities advance together to
+**PULSE-READY-011** — Both first-census capabilities advance together to
 `IMPLEMENTED`.
 
-**PULSE-READY-011** — `IMPLEMENTED` does not imply certification,
+**PULSE-READY-012** — `IMPLEMENTED` does not imply certification,
 activation, binding, entitlement, health or routing.
 
-**PULSE-READY-012** — The held Intelligence event remains unpublished.
+**PULSE-READY-013** — The held Intelligence event remains unpublished.
 
 ## Consequences
 
