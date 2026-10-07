@@ -182,7 +182,7 @@ class HttpControlPlaneContextAuthority:
             },
         )
         try:
-            with urllib.request.urlopen(  # noqa: S310 -- URL is trusted deployment configuration
+            with urllib.request.urlopen(  # nosec B310 -- URL validated by _validated_http_endpoint
                 request,
                 timeout=self._timeout_seconds,
             ) as response:
