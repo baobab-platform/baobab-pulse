@@ -34,10 +34,11 @@ planned_capabilities:
   - capability_key: intelligence.research-mission.manage
     proposal_status: CONTRACTED
     description: >-
-      Adopt the Shared v1 research-mission management contract. Current Pulse
-      exposes create/get verification routes, but the mission repository remains
-      in-memory and the implementation is explicitly a reference/scaffold slice;
-      provider support therefore remains a later evidence-backed promotion.
+      Adopt the Shared v1 research-mission management contract. P-CAP-04 now
+      provides an authenticated, caller-bound canonical CREATE/GET adapter backed
+      by durable PostgreSQL persistence with structural tenant isolation.
+      Provider support remains intentionally undeclared until mutation governance,
+      evidence-backed promotion and certification are completed.
     provenance:
       authority:
         repository: baobab-platform/shared
