@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import urllib.parse
+
 from baobab_pulse.api.dependencies import (
     get_evidence_retrieval_service,
     get_research_mission_mutation_store,
@@ -58,6 +60,23 @@ def build_capability_runtime(
             "incomplete Pulse capability-authority configuration: "
             + ", ".join(missing)
         )
+
+    if actual.environment == Environment.PRODUCTION:
+        insecure = sorted(
+            name
+            for name in (
+                "iam_issuer_url",
+                "iam_jwks_url",
+                "iam_token_url",
+                "control_plane_context_validation_url",
+            )
+            if urllib.parse.urlsplit(required[name] or "").scheme.lower() != "https"
+        )
+        if insecure:
+            raise RuntimeError(
+                "production Pulse capability authorities require HTTPS: "
+                + ", ".join(insecure)
+            )
 
     secret = actual.iam_client_secret
     assert secret is not None
