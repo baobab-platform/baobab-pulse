@@ -51,7 +51,7 @@ class PostgresResearchMissionMutationStore:
             event_candidate_id=event_candidate_id,
         )
         envelope_json = envelope.to_wire_json()
-        envelope_fingerprint = self._sha256(envelope_json)
+        envelope_fingerprint = self._envelope_fingerprint(envelope)
 
         try:
             async with self._database.pool.acquire() as connection, connection.transaction():
@@ -266,8 +266,7 @@ class PostgresResearchMissionMutationStore:
             expected_subject=mission.id,
             expected_idempotency_key=mutation.idempotency_key,
         )
-        envelope_json = envelope.to_wire_json()
-        if self._sha256(envelope_json) != str(outbox_row["envelope_fingerprint"]):
+        if self._envelope_fingerprint(envelope) != str(outbox_row["envelope_fingerprint"]):
             raise MutationIntegrityError(
                 "persisted held event candidate does not match its fingerprint"
             )
@@ -329,6 +328,13 @@ class PostgresResearchMissionMutationStore:
         if envelope.dataschema != _HELD_DATASCHEMA:
             raise MutationIntegrityError("held event candidate must use the unregistered schema URN")
         return envelope
+
+    @classmethod
+    def _envelope_fingerprint(cls, envelope: PulseEventEnvelope) -> str:
+        canonical = cls._canonical_json(
+            envelope.model_dump(mode="json", exclude_none=True)
+        )
+        return cls._sha256(canonical)
 
     @staticmethod
     def _stable_uuid(kind: str, mutation: ResearchMissionCreateMutation) -> UUID:
