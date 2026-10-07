@@ -25,7 +25,6 @@ from baobab_pulse.application.ports.vector_projection_port import ProjectionColl
 from baobab_pulse.application.services.evidence_retrieval_service import EvidenceRetrievalService
 from baobab_pulse.application.services.research_mission_service import ResearchMissionService
 from baobab_pulse.configuration.settings import Settings
-from baobab_pulse.domain.research import ResearchMission
 from baobab_pulse.domain.shared.errors import (
     CapabilityAuthenticationError,
     CapabilityAuthorityUnavailableError,
@@ -44,7 +43,9 @@ from baobab_pulse.infrastructure.haystack.embedders.embedding_adapter import (
 from baobab_pulse.infrastructure.haystack.pipeline_adapter import HaystackPipelineAdapter
 from baobab_pulse.infrastructure.persistence.connection import Database
 from baobab_pulse.infrastructure.persistence.evidence_repository import PostgresEvidenceSetRepository
-from baobab_pulse.infrastructure.persistence.in_memory_repositories import InMemoryRepository
+from baobab_pulse.infrastructure.persistence.research_mission_repository import (
+    PostgresResearchMissionRepository,
+)
 
 
 @lru_cache
@@ -58,10 +59,9 @@ def get_database() -> Database:
 
 
 @lru_cache
-def get_research_mission_repository() -> InMemoryRepository[ResearchMission]:
-    """In-memory for now (item 128 Phase 5: PostgreSQL repositories follow
-    ADR-PULSE-011, not this scaffold)."""
-    return InMemoryRepository()
+def get_research_mission_repository() -> PostgresResearchMissionRepository:
+    """Durable canonical ResearchMission persistence (P-CAP-04)."""
+    return PostgresResearchMissionRepository(get_database())
 
 
 @lru_cache

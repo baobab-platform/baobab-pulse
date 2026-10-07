@@ -1,39 +1,46 @@
-"""``/research-missions`` request/response schemas (item 60, 71)."""
+"""Canonical Shared-v1 ResearchMission capability request/response models."""
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict
+from typing import Literal
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from baobab_pulse.domain.research import ResearchMission, ResearchMissionStatus
 from baobab_pulse.domain.shared.enums import Classification, ConfidenceBand, TenantScope
-from baobab_pulse.domain.shared.value_objects import TenantContext
 
 
-class CreateResearchMissionRequest(BaseModel):
+class ResearchMissionCreateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    title: str
-    research_question: str
-    tenant_id: str | None = None
-    """Control-Plane-minted tenant id (``tn_...``). Required unless
-    ``tenant_scope`` is ``GLOBAL``/``PLATFORM``."""
-    tenant_scope: TenantScope = TenantScope.TENANT
-    classification: Classification = Classification.TENANT
-    confidence_requirement: ConfidenceBand = ConfidenceBand.MODERATE
+    operation: Literal["CREATE"]
+    title: str = Field(min_length=1, max_length=300)
+    research_question: str = Field(min_length=1, max_length=4000)
+    tenant_scope: TenantScope
+    classification: Classification
+    confidence_requirement: ConfidenceBand
 
-    def to_tenant_context(self) -> TenantContext | None:
-        return TenantContext(tenant_id=self.tenant_id) if self.tenant_id else None
+
+class ResearchMissionGetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    operation: Literal["GET"]
+    research_mission_id: str = Field(min_length=1, max_length=128)
+
+
+ResearchMissionManageRequest = ResearchMissionCreateRequest | ResearchMissionGetRequest
 
 
 class ResearchMissionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    id: str
-    title: str
-    research_question: str
+    id: str = Field(min_length=1, max_length=128)
+    title: str = Field(min_length=1, max_length=300)
+    research_question: str = Field(min_length=1, max_length=4000)
     status: ResearchMissionStatus
     tenant_scope: TenantScope
     classification: Classification
+    confidence_requirement: ConfidenceBand
 
     @classmethod
     def from_domain(cls, mission: ResearchMission) -> ResearchMissionResponse:
@@ -44,4 +51,5 @@ class ResearchMissionResponse(BaseModel):
             status=mission.status,
             tenant_scope=mission.tenant_scope,
             classification=mission.classification,
+            confidence_requirement=mission.confidence_requirement,
         )

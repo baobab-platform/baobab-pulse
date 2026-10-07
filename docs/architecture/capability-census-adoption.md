@@ -95,6 +95,23 @@ classification model.
 Provider support is still not declared; P-CAP-06 remains the first
 evidence-backed support-promotion decision.
 
+## P-CAP-04 implementation
+
+ADR-PULSE-015 implements the durable canonical
+`intelligence.research-mission.manage` CREATE/GET slice.
+
+Research missions are now persisted in PostgreSQL and retrieved with tenant
+isolation in the SQL predicate itself. The former unauthenticated in-memory
+scaffold routes are retired so they cannot bypass the P-CAP-03 authentication
+and Control Plane context boundary.
+
+The first canonical adapter remains tenant-bound and therefore rejects
+GLOBAL/PLATFORM creation. It also rejects CONFIDENTIAL/RESTRICTED mission
+creation until a canonical higher-clearance authority exists.
+
+Provider support remains undeclared. P-CAP-05 governs mutation idempotency,
+audit and event semantics before any P-CAP-06 support promotion.
+
 ## Promotion sequence
 
 ```text
