@@ -2,7 +2,7 @@
 
 **Programme:** P-CAP-02  
 **Authority:** ADR-SHARED-017, ADR-SHARED-025, ADR-SHARED-029  
-**Pinned Shared revision:** `e894746243b7e9f65e834b39a6c4cd6504f24179`
+**Pinned Shared revision:** `2d14087727682d454f7140ba65aa97625454991b`
 
 Pulse adopts the first canonical `intelligence` capability tranche as
 **CONTRACTED planned capabilities only**:
