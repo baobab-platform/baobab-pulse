@@ -29,7 +29,7 @@ planned_capabilities:
       authority:
         repository: baobab-platform/shared
         decision: ADR-SHARED-029
-      source_revision: e894746243b7e9f65e834b39a6c4cd6504f24179
+      source_revision: 2d14087727682d454f7140ba65aa97625454991b
 
   - capability_key: intelligence.research-mission.manage
     proposal_status: CONTRACTED
@@ -42,4 +42,4 @@ planned_capabilities:
       authority:
         repository: baobab-platform/shared
         decision: ADR-SHARED-029
-      source_revision: e894746243b7e9f65e834b39a6c4cd6504f24179
+      source_revision: 2d14087727682d454f7140ba65aa97625454991b
