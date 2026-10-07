@@ -41,6 +41,13 @@ provider support.
 
 No capability is declared `IMPLEMENTED` in P-CAP-06.
 
+The repository-level Foundation lifecycle is promoted from `experimental` to
+`active` because G-FCI-1 permits a repository with the `engine` trait to
+carry real `providers[].support` only once it is an active engine repository.
+This repository lifecycle is governance/classification metadata only. It does
+not mean that `baobab-pulse.core` is runtime ACTIVE, certified, healthy,
+bound, granted or routable in the Control Plane.
+
 ## Why PARTIAL is now justified
 
 ### intelligence.evidence.search
