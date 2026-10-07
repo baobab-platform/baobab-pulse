@@ -289,6 +289,33 @@ def test_production_composition_fails_closed_without_authority_configuration() -
         composition.build_capability_runtime(settings)
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "iam_issuer_url",
+        "iam_jwks_url",
+        "iam_token_url",
+        "control_plane_context_validation_url",
+    ],
+)
+def test_production_composition_rejects_plain_http_authorities(field: str) -> None:
+    values: dict[str, object] = {
+        "environment": Environment.PRODUCTION,
+        "iam_issuer_url": _ISSUER,
+        "iam_jwks_url": "https://iam.example.test/jwks",
+        "iam_token_url": "https://iam.example.test/token",
+        "iam_client_secret": "test-secret",
+        "control_plane_context_validation_url": (
+            "https://cp.example.test/v1/platform-context/validate"
+        ),
+    }
+    values[field] = "http://authority.example.test/insecure"
+    settings = Settings(_env_file=None, **values)
+
+    with pytest.raises(RuntimeError, match="require HTTPS"):
+        composition.build_capability_runtime(settings)
+
+
 def test_production_composition_builds_real_authority_adapters(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
