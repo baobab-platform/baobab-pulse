@@ -19,11 +19,12 @@ from baobab_pulse.api.dependencies import get_database, get_settings
 from baobab_pulse.api.error_handlers import register_error_handlers
 from baobab_pulse.api.middleware import TenancyMiddleware
 from baobab_pulse.api.routers import evidence, health, research_missions
+from baobab_pulse.api.runtime import CapabilityApiRuntime
 from baobab_pulse.infrastructure.observability.logging_config import configure_logging
 from baobab_pulse.infrastructure.observability.telemetry import configure_telemetry
 
 
-def create_app() -> FastAPI:
+def create_app(runtime: CapabilityApiRuntime | None = None) -> FastAPI:
     settings = get_settings()
     configure_logging(settings.log_level)
     configure_telemetry(settings)
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
         lifespan=lifespan,
     )
+    app.state.capability_runtime = runtime
     app.add_middleware(TenancyMiddleware)
     register_error_handlers(app)
     app.include_router(health.router)

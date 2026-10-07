@@ -8,13 +8,30 @@ ports/infrastructure boundaries").
 
 from __future__ import annotations
 
+from dataclasses import dataclass, replace
 from functools import lru_cache
+from typing import Annotated
+from uuid import UUID
 
+from fastapi import Header, Request
+
+from baobab_pulse.api.runtime import CapabilityApiRuntime
+from baobab_pulse.application.ports.authentication import (
+    AuthenticatedCaller,
+    WorkloadAuthenticationError,
+    WorkloadAuthenticationUnavailableError,
+)
 from baobab_pulse.application.ports.vector_projection_port import ProjectionCollection
 from baobab_pulse.application.services.evidence_retrieval_service import EvidenceRetrievalService
 from baobab_pulse.application.services.research_mission_service import ResearchMissionService
 from baobab_pulse.configuration.settings import Settings
 from baobab_pulse.domain.research import ResearchMission
+from baobab_pulse.domain.shared.errors import (
+    CapabilityAuthenticationError,
+    CapabilityAuthorityUnavailableError,
+    CapabilityInvalidRequestError,
+    CapabilityRuntimeUnavailableError,
+)
 from baobab_pulse.infrastructure.haystack.document_stores.qdrant_projection_store import (
     QdrantEvidenceProjectionStore,
     resolve_collection_name,
@@ -95,3 +112,72 @@ def get_evidence_retrieval_service() -> EvidenceRetrievalService:
     return EvidenceRetrievalService(
         semantic_retrieval=get_qdrant_evidence_store(), hydration=get_evidence_repository()
     )
+
+
+
+@dataclass(frozen=True, slots=True)
+class AuthenticatedCapabilityRequest:
+    """Verified caller plus the canonical capability runtime."""
+
+    caller: AuthenticatedCaller
+    runtime: CapabilityApiRuntime
+
+
+def _capability_runtime(request: Request) -> CapabilityApiRuntime:
+    runtime = getattr(request.app.state, "capability_runtime", None)
+    if not isinstance(runtime, CapabilityApiRuntime):
+        raise CapabilityRuntimeUnavailableError(
+            "canonical Pulse capability runtime is not configured"
+        )
+    return runtime
+
+
+def _bearer_token(authorization: str | None) -> str:
+    if authorization is None:
+        raise CapabilityAuthenticationError("a bearer token is required")
+    scheme, separator, token = authorization.partition(" ")
+    token = token.strip()
+    if separator != " " or scheme.lower() != "bearer" or not 16 <= len(token) <= 8192:
+        raise CapabilityAuthenticationError("Authorization must contain a valid Bearer token")
+    return token
+
+
+async def require_authenticated_capability_request(
+    request: Request,
+) -> AuthenticatedCapabilityRequest:
+    """Authenticate the actual caller; never infer identity from request fields."""
+
+    token = _bearer_token(request.headers.get("Authorization"))
+    runtime = _capability_runtime(request)
+    try:
+        caller = await runtime.authenticator.authenticate(token)
+    except WorkloadAuthenticationError as exc:
+        raise CapabilityAuthenticationError(
+            "the bearer token could not be verified"
+        ) from exc
+    except WorkloadAuthenticationUnavailableError as exc:
+        raise CapabilityAuthorityUnavailableError(
+            "the workload authentication authority is unavailable"
+        ) from exc
+
+    if caller.access_token != token:
+        caller = replace(caller, access_token=token)
+    return AuthenticatedCapabilityRequest(caller=caller, runtime=runtime)
+
+
+async def require_context_id(
+    x_baobab_context_id: Annotated[
+        str | None,
+        Header(alias="X-Baobab-Context-Id"),
+    ] = None,
+) -> UUID:
+    """Require the opaque CP context handle without accepting tenant authority."""
+
+    if x_baobab_context_id is None:
+        raise CapabilityInvalidRequestError("X-Baobab-Context-Id is required")
+    try:
+        return UUID(x_baobab_context_id)
+    except ValueError as exc:
+        raise CapabilityInvalidRequestError(
+            "X-Baobab-Context-Id must be a UUID"
+        ) from exc

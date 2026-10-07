@@ -78,6 +78,23 @@ The census intentionally does not declare:
 Those are either integration plumbing, implementation details or domain concepts
 without a proven external contract.
 
+## P-CAP-03 implementation
+
+P-CAP-03 is implemented by ADR-PULSE-014.
+
+The canonical evidence-search route now requires an authenticated caller and a
+caller-bound Control Plane context. `X-Baobab-Tenant-Id` is not authority for
+that route, and the Shared request body no longer exposes
+`requester_clearance`.
+
+Because the current canonical IAM/Control Plane contracts do not define higher
+classification clearance, the first adapter is intentionally capped at
+`Classification.TENANT`. This is a fail-closed boundary, not a permanent
+classification model.
+
+Provider support is still not declared; P-CAP-06 remains the first
+evidence-backed support-promotion decision.
+
 ## Promotion sequence
 
 ```text
