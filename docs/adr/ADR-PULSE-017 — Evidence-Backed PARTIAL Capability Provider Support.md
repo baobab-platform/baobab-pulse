@@ -5,7 +5,7 @@
 **Programme:** P-CAP-06  
 **Provider:** `baobab-pulse.core`  
 **Capabilities:** `intelligence.evidence.search`, `intelligence.research-mission.manage`  
-**Depends on:** ADR-SHARED-017, ADR-SHARED-025, ADR-SHARED-029, ADR-PULSE-014, ADR-PULSE-015, ADR-PULSE-016
+**Depends on:** ADR-SHARED-017, ADR-SHARED-025, ADR-SHARED-029, ADR-SHARED-030, ADR-PULSE-014, ADR-PULSE-015, ADR-PULSE-016
 
 ## Context
 
