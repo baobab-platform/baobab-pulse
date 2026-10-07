@@ -76,6 +76,13 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked --all-groups
 
+      - name: Validate capability provider declaration against pinned Shared
+        run: >-
+          uv run python .shared-contracts/scripts/capability_catalogue.py
+          validate-declaration .baobab/capability-provider.yaml
+          --engine-id baobab-pulse
+          --repository-root .
+
       - name: Lint (ruff)
         run: uv run ruff check .
 
