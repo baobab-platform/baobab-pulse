@@ -35,7 +35,13 @@ issued (INV-PULSE-004)."""
 
 
 class PulseEventEnvelope(BaseModel):
-    """A local Pulse envelope for a future ``com.baobab-platform.intelligence.<entity>.<verb>.vN`` event. RTD-09 reserves the intelligence context but activates no producer event."""
+    """A local Pulse envelope for a future ``com.baobab-platform.intelligence.<entity>.<verb>.vN`` event.
+
+    RTD-09 reserves the intelligence context but activates no producer event.
+    P-CAP-05 may persist an envelope-shaped candidate only when its durable
+    outbox state is HELD_UNREGISTERED; this model does not itself authorize
+    publication.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 

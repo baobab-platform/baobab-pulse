@@ -1,4 +1,4 @@
-"""Canonical intelligence.research-mission.manage adapter (P-CAP-04)."""
+"""Canonical intelligence.research-mission.manage adapter (P-CAP-04/05)."""
 
 from typing import Protocol
 from uuid import UUID
@@ -12,10 +12,18 @@ from baobab_pulse.application.ports.context_authority import (
     ContextNotFoundError,
     TrustedPlatformContext,
 )
+from baobab_pulse.application.ports.research_mission_mutation import (
+    ResearchMissionCreateMutation,
+    ResearchMissionMutationStore,
+)
 from baobab_pulse.contracts.api.research_missions import (
     ResearchMissionCreateRequest,
     ResearchMissionGetRequest,
     ResearchMissionManageRequest,
+)
+from baobab_pulse.contracts.mutations import (
+    canonical_create_request_json,
+    create_request_fingerprint,
 )
 from baobab_pulse.domain.research import ResearchMission
 from baobab_pulse.domain.shared.enums import Classification, TenantScope
@@ -24,6 +32,7 @@ from baobab_pulse.domain.shared.errors import (
     CapabilityAuthenticationError,
     CapabilityAuthorityUnavailableError,
     CapabilityContextNotFoundError,
+    CapabilityInvalidRequestError,
     ResearchMissionNotFoundError,
 )
 from baobab_pulse.domain.shared.identifiers import new_id
@@ -31,8 +40,6 @@ from baobab_pulse.domain.shared.value_objects import TenantContext
 
 
 class DurableResearchMissionRepository(Protocol):
-    async def add(self, entity: ResearchMission) -> None: ...
-
     async def get_for_tenant(
         self,
         entity_id: str,
@@ -42,16 +49,18 @@ class DurableResearchMissionRepository(Protocol):
 
 
 class ResearchMissionManageCapabilityService:
-    """Create/get durable ResearchMission aggregates under trusted CP tenancy."""
+    """Create/get ResearchMissions under trusted CP tenancy and mutation governance."""
 
     def __init__(
         self,
         *,
         context_authority: ContextAuthorityPort,
         repository: DurableResearchMissionRepository,
+        mutation_store: ResearchMissionMutationStore,
     ) -> None:
         self._context_authority = context_authority
         self._repository = repository
+        self._mutation_store = mutation_store
 
     async def manage(
         self,
@@ -59,10 +68,18 @@ class ResearchMissionManageCapabilityService:
         context_id: UUID,
         caller: AuthenticatedCaller,
         request: ResearchMissionManageRequest,
+        correlation_id: UUID,
+        idempotency_key: str | None,
     ) -> ResearchMission:
         trusted = await self._trusted_context(context_id=context_id, caller=caller)
         if isinstance(request, ResearchMissionCreateRequest):
-            return await self._create(request=request, trusted=trusted)
+            return await self._create(
+                request=request,
+                trusted=trusted,
+                caller=caller,
+                correlation_id=correlation_id,
+                idempotency_key=idempotency_key,
+            )
         return await self._get(request=request, trusted=trusted)
 
     async def _create(
@@ -70,7 +87,14 @@ class ResearchMissionManageCapabilityService:
         *,
         request: ResearchMissionCreateRequest,
         trusted: TrustedPlatformContext,
+        caller: AuthenticatedCaller,
+        correlation_id: UUID,
+        idempotency_key: str | None,
     ) -> ResearchMission:
+        if idempotency_key is None:
+            raise CapabilityInvalidRequestError(
+                "Idempotency-Key is required for ResearchMission CREATE"
+            )
         if request.tenant_scope in (TenantScope.GLOBAL, TenantScope.PLATFORM):
             raise CapabilityAccessDeniedError(
                 "tenant-bound capability invocation cannot create global/platform research missions"
@@ -81,7 +105,7 @@ class ResearchMissionManageCapabilityService:
             Classification.TENANT,
         ):
             raise CapabilityAccessDeniedError(
-                "P-CAP-04 does not grant CONFIDENTIAL/RESTRICTED mission authority"
+                "P-CAP-05 does not grant CONFIDENTIAL/RESTRICTED mission authority"
             )
 
         mission = ResearchMission(
@@ -98,8 +122,20 @@ class ResearchMissionManageCapabilityService:
             confidence_requirement=request.confidence_requirement,
         )
         mission.check_tenant_context()
-        await self._repository.add(mission)
-        return mission
+        commit = await self._mutation_store.commit_create(
+            ResearchMissionCreateMutation(
+                tenant_id=trusted.tenant_id,
+                actor_subject=caller.subject,
+                actor_client_id=caller.client_id,
+                context_id=trusted.context_id,
+                idempotency_key=idempotency_key,
+                correlation_id=correlation_id,
+                request_fingerprint=create_request_fingerprint(request),
+                request_payload=canonical_create_request_json(request),
+                mission=mission,
+            )
+        )
+        return commit.mission
 
     async def _get(
         self,

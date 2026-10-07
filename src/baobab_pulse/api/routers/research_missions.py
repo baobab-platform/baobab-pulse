@@ -9,6 +9,8 @@ from fastapi import APIRouter, Depends
 
 from baobab_pulse.api.dependencies import (
     AuthenticatedCapabilityRequest,
+    CapabilityRequestMetadata,
+    get_capability_request_metadata,
     require_authenticated_capability_request,
     require_context_id,
 )
@@ -33,6 +35,10 @@ async def manage_research_mission(
         Depends(require_authenticated_capability_request),
     ],
     context_id: Annotated[UUID, Depends(require_context_id)],
+    metadata: Annotated[
+        CapabilityRequestMetadata,
+        Depends(get_capability_request_metadata),
+    ],
 ) -> ResearchMissionResponse:
     service = auth.runtime.research_missions
     if service is None:
@@ -44,5 +50,7 @@ async def manage_research_mission(
         context_id=context_id,
         caller=auth.caller,
         request=request,
+        correlation_id=metadata.correlation_id,
+        idempotency_key=metadata.idempotency_key,
     )
     return ResearchMissionResponse.from_domain(mission)

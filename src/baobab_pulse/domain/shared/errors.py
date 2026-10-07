@@ -87,3 +87,14 @@ class CapabilityRuntimeUnavailableError(PulseError):
 
 class ResearchMissionNotFoundError(PulseError):
     """A ResearchMission is absent from the caller-bound tenant scope."""
+
+class IdempotencyConflictError(PulseError):
+    """An idempotency key is already bound to a different mutation request."""
+
+
+class MutationPersistenceUnavailableError(PulseError):
+    """The durable mutation-governance store is unavailable."""
+
+
+class MutationIntegrityError(PulseError):
+    """Persisted mutation, audit or outbox state violates integrity invariants."""

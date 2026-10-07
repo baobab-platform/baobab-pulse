@@ -19,6 +19,8 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from baobab_pulse.contracts.events import PulseEventEnvelope, build_event_type
+from baobab_pulse.domain.shared.base import DomainEvent
+from baobab_pulse.infrastructure.messaging.outbox import InMemoryOutbox
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "contracts"
 
@@ -87,3 +89,21 @@ def test_tenant_scope_without_tenantid_is_rejected_before_it_ever_reaches_the_sc
             correlationid=uuid4(),
             data={},
         )
+
+
+
+async def test_held_research_mission_candidate_cannot_use_legacy_publisher() -> None:
+    outbox = InMemoryOutbox()
+    event = DomainEvent(
+        subject_id="rms_123",
+        tenant_id="tn_acme01",
+        payload={"research_mission_id": "rms_123"},
+    )
+
+    with pytest.raises(ValueError, match="HELD_UNREGISTERED"):
+        await outbox.publish(
+            event,
+            event_type="com.baobab-platform.intelligence.research-mission.created.v1",
+        )
+
+    assert outbox.entries == []

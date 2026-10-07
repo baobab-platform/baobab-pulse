@@ -112,6 +112,26 @@ creation until a canonical higher-clearance authority exists.
 Provider support remains undeclared. P-CAP-05 governs mutation idempotency,
 audit and event semantics before any P-CAP-06 support promotion.
 
+## P-CAP-05 implementation
+
+ADR-PULSE-016 governs mutation semantics for the canonical ResearchMission
+CREATE operation.
+
+CREATE now requires a valid `Idempotency-Key`. The durable key is scoped by
+trusted tenant, authenticated subject, capability and key. Identical retries
+return the originally committed ResearchMission; reuse with a different request
+fails with `409 IDEMPOTENCY_CONFLICT`.
+
+One PostgreSQL transaction commits the ResearchMission, idempotency record,
+mutation-audit provenance and one event-envelope candidate.
+
+The event candidate is deliberately `HELD_UNREGISTERED`. ADR-SHARED-025 still
+keeps the Intelligence event context RESERVED with no activated producer event,
+so P-CAP-05 adds no publisher claim and no runtime relay permission.
+
+Provider support remains undeclared. P-CAP-06 is the first support-promotion
+decision.
+
 ## Promotion sequence
 
 ```text

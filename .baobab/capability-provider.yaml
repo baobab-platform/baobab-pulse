@@ -34,11 +34,11 @@ planned_capabilities:
   - capability_key: intelligence.research-mission.manage
     proposal_status: CONTRACTED
     description: >-
-      Adopt the Shared v1 research-mission management contract. P-CAP-04 now
-      provides an authenticated, caller-bound canonical CREATE/GET adapter backed
-      by durable PostgreSQL persistence with structural tenant isolation.
-      Provider support remains intentionally undeclared until mutation governance,
-      evidence-backed promotion and certification are completed.
+      Adopt the Shared v1 research-mission management contract. P-CAP-04 provides
+      authenticated, caller-bound durable CREATE/GET. P-CAP-05 adds atomic
+      idempotency, mutation audit provenance and a HELD_UNREGISTERED transactional
+      outbox candidate for CREATE. Provider support remains intentionally
+      undeclared until the P-CAP-06 evidence-backed promotion decision.
     provenance:
       authority:
         repository: baobab-platform/shared
