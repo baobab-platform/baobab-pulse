@@ -62,6 +62,7 @@ class FakeContextAuthority:
         self.tenant_id = tenant_id
         self.error = error
         self.last_caller: AuthenticatedCaller | None = None
+        self.calls = 0
 
     async def redeem(
         self,
@@ -70,6 +71,7 @@ class FakeContextAuthority:
         caller: AuthenticatedCaller,
     ) -> TrustedPlatformContext:
         assert context_id == _CONTEXT_ID
+        self.calls += 1
         self.last_caller = caller
         if self.error is not None:
             raise self.error
@@ -318,3 +320,4 @@ def test_restricted_scope_alone_cannot_invoke_evidence_search() -> None:
 
     assert response.status_code == 403
     assert retrieval.clearance is None
+    assert authority.calls == 0
