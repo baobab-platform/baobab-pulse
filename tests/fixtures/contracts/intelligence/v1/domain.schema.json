@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.baobab-platform.com/intelligence/v1/domain.schema.json",
   "title": "Baobab Intelligence capability contracts v1",
-  "description": "Provider-neutral contracts for the first canonical intelligence capability tranche. These schemas define business semantics only; tenant authority, caller clearance and capability entitlement are established by authenticated platform context rather than caller-supplied authority fields.",
+  "description": "Provider-neutral contracts for the first canonical intelligence capability tranche. These schemas define business semantics only; tenant authority is established by caller-bound Control Plane context, while operation and classification authority are established by the authenticated Pulse resource-server token. None are caller-supplied request fields.",
   "$defs": {
     "classification": {
       "type": "string",
@@ -105,7 +105,7 @@
         },
         "top_k": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 }
       },
-      "description": "Search authorised intelligence evidence semantically. Tenant scope, principal authority and data-classification clearance are obtained from authenticated platform context and are not caller-supplied request fields."
+      "description": "Search authorised intelligence evidence semantically. Tenant scope is obtained from caller-bound Control Plane context; operation authority and data-classification clearance are obtained from the authenticated Pulse resource-server token. None are caller-supplied request fields."
     },
     "evidenceCandidate": {
       "type": "object",
