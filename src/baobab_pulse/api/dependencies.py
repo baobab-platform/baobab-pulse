@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from functools import lru_cache
 from typing import Annotated
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import Header, Request
 
@@ -22,6 +22,7 @@ from baobab_pulse.application.ports.authentication import (
     WorkloadAuthenticationUnavailableError,
 )
 from baobab_pulse.application.ports.vector_projection_port import ProjectionCollection
+from baobab_pulse.contracts.mutations import validate_idempotency_key
 from baobab_pulse.application.services.evidence_retrieval_service import EvidenceRetrievalService
 from baobab_pulse.application.services.research_mission_service import ResearchMissionService
 from baobab_pulse.configuration.settings import Settings
@@ -43,6 +44,9 @@ from baobab_pulse.infrastructure.haystack.embedders.embedding_adapter import (
 from baobab_pulse.infrastructure.haystack.pipeline_adapter import HaystackPipelineAdapter
 from baobab_pulse.infrastructure.persistence.connection import Database
 from baobab_pulse.infrastructure.persistence.evidence_repository import PostgresEvidenceSetRepository
+from baobab_pulse.infrastructure.persistence.research_mission_mutation import (
+    PostgresResearchMissionMutationStore,
+)
 from baobab_pulse.infrastructure.persistence.research_mission_repository import (
     PostgresResearchMissionRepository,
 )
@@ -62,6 +66,12 @@ def get_database() -> Database:
 def get_research_mission_repository() -> PostgresResearchMissionRepository:
     """Durable canonical ResearchMission persistence (P-CAP-04)."""
     return PostgresResearchMissionRepository(get_database())
+
+
+@lru_cache
+def get_research_mission_mutation_store() -> PostgresResearchMissionMutationStore:
+    """Atomic idempotency/audit/outbox persistence for P-CAP-05 CREATE."""
+    return PostgresResearchMissionMutationStore(get_database())
 
 
 @lru_cache
@@ -123,6 +133,14 @@ class AuthenticatedCapabilityRequest:
     runtime: CapabilityApiRuntime
 
 
+@dataclass(frozen=True, slots=True)
+class CapabilityRequestMetadata:
+    """Trusted request metadata used by mutation-governance logic."""
+
+    correlation_id: UUID
+    idempotency_key: str | None
+
+
 def _capability_runtime(request: Request) -> CapabilityApiRuntime:
     runtime = getattr(request.app.state, "capability_runtime", None)
     if not isinstance(runtime, CapabilityApiRuntime):
@@ -181,3 +199,35 @@ async def require_context_id(
         raise CapabilityInvalidRequestError(
             "X-Baobab-Context-Id must be a UUID"
         ) from exc
+
+
+
+async def get_capability_request_metadata(
+    request: Request,
+    idempotency_key: Annotated[
+        str | None,
+        Header(alias="Idempotency-Key"),
+    ] = None,
+) -> CapabilityRequestMetadata:
+    """Validate correlation and optional mutation idempotency metadata."""
+
+    raw_correlation_id = getattr(request.state, "correlation_id", None)
+    try:
+        correlation_id = UUID(str(raw_correlation_id))
+    except (TypeError, ValueError) as exc:
+        replacement = uuid4()
+        request.state.correlation_id = str(replacement)
+        raise CapabilityInvalidRequestError(
+            "X-Correlation-Id must be a UUID when supplied"
+        ) from exc
+
+    if idempotency_key is not None:
+        try:
+            idempotency_key = validate_idempotency_key(idempotency_key)
+        except ValueError as exc:
+            raise CapabilityInvalidRequestError(str(exc)) from exc
+
+    return CapabilityRequestMetadata(
+        correlation_id=correlation_id,
+        idempotency_key=idempotency_key,
+    )

@@ -42,5 +42,7 @@ class TenancyMiddleware(BaseHTTPMiddleware):
         context = bind_tenant_context(TenantContext(tenant_id=tenant_id)) if tenant_id else nullcontext()
         with context:
             response = await call_next(request)
-        response.headers[_CORRELATION_HEADER] = correlation_id
+        response.headers[_CORRELATION_HEADER] = str(
+            getattr(request.state, "correlation_id", correlation_id)
+        )
         return response

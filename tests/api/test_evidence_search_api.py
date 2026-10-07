@@ -38,6 +38,7 @@ _CACHED_DEPENDENCIES = (
     dependencies.get_evidence_repository,
     dependencies.get_evidence_retrieval_service,
     dependencies.get_research_mission_repository,
+    dependencies.get_research_mission_mutation_store,
     dependencies.get_research_mission_service,
 )
 

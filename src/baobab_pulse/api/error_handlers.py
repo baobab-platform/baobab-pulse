@@ -8,7 +8,7 @@ reaches an HTTP response — everything is mapped to
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -21,7 +21,10 @@ from baobab_pulse.domain.shared.errors import (
     CapabilityContextNotFoundError,
     CapabilityInvalidRequestError,
     CapabilityRuntimeUnavailableError,
+    IdempotencyConflictError,
     InvariantViolation,
+    MutationIntegrityError,
+    MutationPersistenceUnavailableError,
     ProjectionRebuildFailed,
     ProjectionWriteFailed,
     PulseError,
@@ -34,14 +37,26 @@ from baobab_pulse.infrastructure.haystack.errors import PulseHaystackError
 
 logger = logging.getLogger(__name__)
 
+
+def _request_correlation_id(request: Request) -> UUID:
+    raw = getattr(request.state, "correlation_id", None)
+    try:
+        return UUID(str(raw))
+    except (TypeError, ValueError):
+        return uuid4()
+
+
 _STATUS_BY_ERROR: tuple[tuple[type[PulseError], int, str, bool], ...] = (
     (CapabilityInvalidRequestError, 400, "CAPABILITY_REQUEST_INVALID", False),
     (CapabilityAuthenticationError, 401, "AUTH_TOKEN_INVALID", False),
     (CapabilityAccessDeniedError, 403, "CAPABILITY_ACCESS_DENIED", False),
     (CapabilityContextNotFoundError, 404, "CONTEXT_NOT_FOUND", False),
+    (IdempotencyConflictError, 409, "IDEMPOTENCY_CONFLICT", False),
     (ResearchMissionNotFoundError, 404, "RESEARCH_MISSION_NOT_FOUND", False),
     (CapabilityAuthorityUnavailableError, 503, "CAPABILITY_AUTHORITY_UNAVAILABLE", True),
     (CapabilityRuntimeUnavailableError, 503, "CAPABILITY_RUNTIME_UNAVAILABLE", True),
+    (MutationPersistenceUnavailableError, 503, "MUTATION_STORE_UNAVAILABLE", True),
+    (MutationIntegrityError, 500, "MUTATION_INTEGRITY_ERROR", False),
     (TenantContextMissingError, 400, "TENANT_CONTEXT_MISSING", False),
     (InvariantViolation, 422, "DOMAIN_INVARIANT_VIOLATION", False),
     # Semantic retrieval/projection failures are Qdrant-specific and
@@ -69,7 +84,7 @@ def register_error_handlers(app: FastAPI) -> None:
             status=status_code,
             detail=str(exc),
             code=code,
-            correlation_id=uuid4(),
+            correlation_id=_request_correlation_id(request),
             retryable=retryable,
         )
         return JSONResponse(
@@ -87,7 +102,7 @@ def register_error_handlers(app: FastAPI) -> None:
             status=500,
             detail="An unexpected error occurred.",
             code="INTERNAL_ERROR",
-            correlation_id=uuid4(),
+            correlation_id=_request_correlation_id(request),
             retryable=False,
         )
         return JSONResponse(
