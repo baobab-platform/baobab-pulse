@@ -27,6 +27,7 @@ evidence:
     - docs/adr/ADR-PULSE-014 — Authenticated Context-Bound Evidence Search Capability.md
     - docs/adr/ADR-PULSE-015 — Durable Context-Bound ResearchMission Capability.md
     - docs/adr/ADR-PULSE-016 — ResearchMission Mutation Idempotency, Audit and Held Event Semantics.md
+    - docs/adr/ADR-PULSE-017 — Evidence-Backed PARTIAL Capability Provider Support.md
   source_paths:
     - src/baobab_pulse/application/services/upstream_fact_projection_service.py
     - src/baobab_pulse/application/services/evidence_search_capability.py
@@ -39,3 +40,5 @@ evidence:
     - tests/contract/test_evidence_search_capability_contract.py
     - tests/contract/test_research_mission_capability_contract.py
     - tests/integration/test_research_mission_mutation_governance.py
+    - tests/architecture/test_p_cap_06_partial_support_boundary.py
+    - tests/contract/test_capability_census_declaration.py
