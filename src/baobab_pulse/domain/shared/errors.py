@@ -83,3 +83,7 @@ class CapabilityAuthorityUnavailableError(PulseError):
 
 class CapabilityRuntimeUnavailableError(PulseError):
     """The canonical capability runtime has not been configured."""
+
+
+class ResearchMissionNotFoundError(PulseError):
+    """A ResearchMission is absent from the caller-bound tenant scope."""
