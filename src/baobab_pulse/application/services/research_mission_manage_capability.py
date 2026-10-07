@@ -75,7 +75,6 @@ class ResearchMissionManageCapabilityService:
         request: ResearchMissionManageRequest,
         correlation_id: UUID,
         idempotency_key: str | None,
-        clearance: Classification,
     ) -> ResearchMission:
         trusted = await self._trusted_context(context_id=context_id, caller=caller)
         clearance = classification_clearance(
@@ -105,6 +104,7 @@ class ResearchMissionManageCapabilityService:
         caller: AuthenticatedCaller,
         correlation_id: UUID,
         idempotency_key: str | None,
+        clearance: Classification,
     ) -> ResearchMission:
         if idempotency_key is None:
             raise CapabilityInvalidRequestError(
