@@ -76,11 +76,11 @@ class ResearchMissionManageCapabilityService:
         correlation_id: UUID,
         idempotency_key: str | None,
     ) -> ResearchMission:
-        trusted = await self._trusted_context(context_id=context_id, caller=caller)
         clearance = classification_clearance(
             caller,
             required_scope=RESEARCH_MISSION_MANAGE_SCOPE,
         )
+        trusted = await self._trusted_context(context_id=context_id, caller=caller)
         if isinstance(request, ResearchMissionCreateRequest):
             return await self._create(
                 request=request,
