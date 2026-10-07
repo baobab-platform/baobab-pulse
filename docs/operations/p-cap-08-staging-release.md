@@ -135,5 +135,41 @@ It still leaves the following cross-platform runtime facts outstanding:
 2. EA-09 certifications for the production-bound release;
 3. governed release approval;
 4. EngineInstance deployment and observations;
-5. governed provider activation;
-6. later consumer-specific bindings, grants and Intelligence scope allocation.
+5. governed provider activation.
+
+Consumer-specific CapabilityBinding, CapabilityGrant, tenant Intelligence scope
+allocation and tenant routing are outside P-CAP-08. The research-mission-created
+event remains `HELD_UNREGISTERED`.
+
+
+## Verified coordinated selection (7 October 2026)
+
+The published Pulse identity is:
+
+```text
+tag      v0.1.0-staging
+source   b355bfa1139efb5e72ac0895a36b49fb1f2e4bc2
+digest   sha256:1f57b26d017a98dd14dc9b589ef40cfd2431c1241fd928c13027f7f353ea9b80
+run      https://github.com/baobab-platform/baobab-pulse/actions/runs/37627757084
+```
+
+The first five-component Infrastructure selection proposes
+`v0.1.0-staging.coordination.json` under `deploy/releases/staging/`, selecting
+Shared v2.4.1-staging, CP v1.1.1-staging, IAM federation authority and Keycloak
+v0.1.1-staging, and Pulse v0.1.0-staging. Infrastructure retains the matching
+publisher receipts, SPDX SBOMs and a dated verification snapshot. The selection
+is account-independent; it does not imply that an Infrastructure tag or a real
+AWS manifest exists. Consult Infrastructure's
+`docs/runbooks/p-cap-08-first-coordinated-release.md` for account inputs, live
+verification, observation and governance handoff.
+
+The 7 October audit independently ran Python 3.14.7 tests: 163 passed and four
+live PostgreSQL tests skipped because no migrated database was reachable. Ruff
+and strict mypy passed. These local results are not staging qualification.
+
+Pulse's `/healthz` establishes process liveness only. The infrastructure ECS
+health observation therefore must be supplemented by `/readyz` dependency
+evidence and authenticated capability checks against the actual IAM and CP
+authorities. Evidence-search qualification requires working semantic retrieval;
+`/readyz` may otherwise report overall readiness with semantic search degraded.
+Do not promote liveness or image publication to EA-09 certification.
