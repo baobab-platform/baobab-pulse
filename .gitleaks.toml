@@ -1,0 +1,11 @@
+title = "Baobab Pulse secret-scanning policy"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Synthetic P-CAP-07 idempotency replay key; exact value, rule, and test path only."
+targetRules = ["generic-api-key"]
+condition = "AND"
+paths = ['''^tests/api/test_research_mission_manage_api\.py$''']
+regexes = ['''^pcap07-missing-operation$''']

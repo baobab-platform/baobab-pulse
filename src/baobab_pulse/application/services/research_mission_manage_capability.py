@@ -3,6 +3,11 @@
 from typing import Protocol
 from uuid import UUID
 
+from baobab_pulse.application.intelligence_authority import (
+    RESEARCH_MISSION_MANAGE_SCOPE,
+    classification_clearance,
+    permits_classification,
+)
 from baobab_pulse.application.ports.authentication import AuthenticatedCaller
 from baobab_pulse.application.ports.context_authority import (
     ContextAccessDeniedError,
@@ -71,6 +76,10 @@ class ResearchMissionManageCapabilityService:
         correlation_id: UUID,
         idempotency_key: str | None,
     ) -> ResearchMission:
+        clearance = classification_clearance(
+            caller,
+            required_scope=RESEARCH_MISSION_MANAGE_SCOPE,
+        )
         trusted = await self._trusted_context(context_id=context_id, caller=caller)
         if isinstance(request, ResearchMissionCreateRequest):
             return await self._create(
@@ -79,8 +88,13 @@ class ResearchMissionManageCapabilityService:
                 caller=caller,
                 correlation_id=correlation_id,
                 idempotency_key=idempotency_key,
+                clearance=clearance,
             )
-        return await self._get(request=request, trusted=trusted)
+        return await self._get(
+            request=request,
+            trusted=trusted,
+            clearance=clearance,
+        )
 
     async def _create(
         self,
@@ -90,6 +104,7 @@ class ResearchMissionManageCapabilityService:
         caller: AuthenticatedCaller,
         correlation_id: UUID,
         idempotency_key: str | None,
+        clearance: Classification,
     ) -> ResearchMission:
         if idempotency_key is None:
             raise CapabilityInvalidRequestError(
@@ -99,13 +114,9 @@ class ResearchMissionManageCapabilityService:
             raise CapabilityAccessDeniedError(
                 "tenant-bound capability invocation cannot create global/platform research missions"
             )
-        if request.classification not in (
-            Classification.PUBLIC,
-            Classification.BAOBAB_INTERNAL,
-            Classification.TENANT,
-        ):
+        if not permits_classification(clearance, request.classification):
             raise CapabilityAccessDeniedError(
-                "P-CAP-05 does not grant CONFIDENTIAL/RESTRICTED mission authority"
+                "the requested ResearchMission classification exceeds caller clearance"
             )
 
         mission = ResearchMission(
@@ -142,12 +153,16 @@ class ResearchMissionManageCapabilityService:
         *,
         request: ResearchMissionGetRequest,
         trusted: TrustedPlatformContext,
+        clearance: Classification,
     ) -> ResearchMission:
         mission = await self._repository.get_for_tenant(
             request.research_mission_id,
             tenant_id=trusted.tenant_id,
         )
-        if mission is None:
+        if mission is None or not permits_classification(
+            clearance,
+            mission.classification,
+        ):
             raise ResearchMissionNotFoundError(
                 "research mission is unavailable to this caller"
             )

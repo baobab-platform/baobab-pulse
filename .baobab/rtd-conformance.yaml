@@ -7,8 +7,10 @@ repository:
   maturity: IMPLEMENTED_CONSUMER
 shared:
   repository: baobab-platform/shared
-  commit: "482c3f6dc6686cb1fcdb86592389bba9e8a73e04"
+  commit: "363e0ead9ebb5aa87f5f813b63b785b7f63cc39e"
   required_contracts:
+    - contracts/authorization/v1/scope-registry.yaml
+    - contracts/identity/v1/workload-registry.yaml
     - contracts/capability/v1/catalogue.yaml
     - contracts/control-plane/v1/domain.schema.json
     - contracts/control-plane/v1/platform-context.schema.json
@@ -28,10 +30,15 @@ evidence:
     - docs/adr/ADR-PULSE-015 — Durable Context-Bound ResearchMission Capability.md
     - docs/adr/ADR-PULSE-016 — ResearchMission Mutation Idempotency, Audit and Held Event Semantics.md
     - docs/adr/ADR-PULSE-017 — Evidence-Backed PARTIAL Capability Provider Support.md
+    - docs/adr/ADR-PULSE-018 — Production Authority Adapters and IMPLEMENTED Capability Provider Readiness.md
   source_paths:
     - src/baobab_pulse/application/services/upstream_fact_projection_service.py
+    - src/baobab_pulse/application/intelligence_authority.py
     - src/baobab_pulse/application/services/evidence_search_capability.py
     - src/baobab_pulse/application/services/research_mission_manage_capability.py
+    - src/baobab_pulse/infrastructure/authentication/oidc_jwks.py
+    - src/baobab_pulse/infrastructure/control_plane/context_authority.py
+    - src/baobab_pulse/api/composition.py
     - src/baobab_pulse/infrastructure/persistence/research_mission_mutation.py
     - src/baobab_pulse/domain/projections/models.py
   test_paths:
@@ -39,6 +46,11 @@ evidence:
     - tests/contract/test_rtd09_upstream_contracts.py
     - tests/contract/test_evidence_search_capability_contract.py
     - tests/contract/test_research_mission_capability_contract.py
+    - tests/api/test_evidence_search_api.py
+    - tests/api/test_research_mission_manage_api.py
+    - tests/infrastructure/test_p_cap_07_authority_adapters.py
+    - tests/integration/test_evidence_postgres_qdrant_roundtrip.py
+    - tests/integration/test_research_mission_postgres_roundtrip.py
     - tests/integration/test_research_mission_mutation_governance.py
-    - tests/architecture/test_p_cap_06_partial_support_boundary.py
+    - tests/architecture/test_p_cap_07_provider_readiness.py
     - tests/contract/test_capability_census_declaration.py

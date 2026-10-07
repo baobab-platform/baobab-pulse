@@ -46,7 +46,10 @@ _CACHED_DEPENDENCIES = (
 class FakeAuthenticator:
     async def authenticate(self, access_token: str) -> AuthenticatedCaller:
         assert access_token == _TOKEN
-        return AuthenticatedCaller(subject="wl_test")
+        return AuthenticatedCaller(
+            subject="wl_test",
+            scopes=frozenset({"intelligence:evidence:search"}),
+        )
 
 
 class FakeContextAuthority:
@@ -59,6 +62,7 @@ class FakeContextAuthority:
         self.tenant_id = tenant_id
         self.error = error
         self.last_caller: AuthenticatedCaller | None = None
+        self.calls = 0
 
     async def redeem(
         self,
@@ -67,6 +71,7 @@ class FakeContextAuthority:
         caller: AuthenticatedCaller,
     ) -> TrustedPlatformContext:
         assert context_id == _CONTEXT_ID
+        self.calls += 1
         self.last_caller = caller
         if self.error is not None:
             raise self.error
@@ -186,7 +191,7 @@ def test_validated_context_is_the_only_tenant_authority() -> None:
     assert authority.last_caller.access_token == _TOKEN
     assert retrieval.tenant_id == "tn_authoritative"
     assert retrieval.context_id == str(_CONTEXT_ID)
-    assert retrieval.clearance == Classification.TENANT
+    assert retrieval.clearance == Classification.CONFIDENTIAL
 
 
 def test_caller_cannot_select_classification_clearance() -> None:
@@ -247,3 +252,72 @@ def test_unconfigured_capability_runtime_fails_closed() -> None:
 
     assert response.status_code == 503
     assert response.json()["code"] == "CAPABILITY_RUNTIME_UNAVAILABLE"
+
+
+
+class RestrictedAuthenticator:
+    async def authenticate(self, access_token: str) -> AuthenticatedCaller:
+        assert access_token == _TOKEN
+        return AuthenticatedCaller(
+            subject="wl_test",
+            scopes=frozenset(
+                {
+                    "intelligence:evidence:search",
+                    "intelligence:restricted",
+                }
+            ),
+        )
+
+
+class MissingEvidenceScopeAuthenticator:
+    async def authenticate(self, access_token: str) -> AuthenticatedCaller:
+        assert access_token == _TOKEN
+        return AuthenticatedCaller(
+            subject="wl_test",
+            scopes=frozenset({"intelligence:restricted"}),
+        )
+
+
+def test_restricted_scope_raises_evidence_clearance_only_with_operation_scope() -> None:
+    authority = FakeContextAuthority()
+    retrieval = RecordingRetrieval()
+    service = EvidenceSearchCapabilityService(
+        context_authority=authority,
+        retrieval=retrieval,
+    )
+    runtime = CapabilityApiRuntime(
+        authenticator=RestrictedAuthenticator(),
+        evidence_search=service,
+    )
+    with TestClient(create_app(runtime)) as client:
+        response = client.post(
+            "/evidence/search",
+            json={"query_text": "coffee exports"},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 200
+    assert retrieval.clearance == Classification.RESTRICTED
+
+
+def test_restricted_scope_alone_cannot_invoke_evidence_search() -> None:
+    authority = FakeContextAuthority()
+    retrieval = RecordingRetrieval()
+    service = EvidenceSearchCapabilityService(
+        context_authority=authority,
+        retrieval=retrieval,
+    )
+    runtime = CapabilityApiRuntime(
+        authenticator=MissingEvidenceScopeAuthenticator(),
+        evidence_search=service,
+    )
+    with TestClient(create_app(runtime)) as client:
+        response = client.post(
+            "/evidence/search",
+            json={"query_text": "coffee exports"},
+            headers=_headers(),
+        )
+
+    assert response.status_code == 403
+    assert retrieval.clearance is None
+    assert authority.calls == 0

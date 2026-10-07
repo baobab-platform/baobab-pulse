@@ -1,4 +1,4 @@
-"""P-CAP-06 invariants for the Pulse capability-provider declaration."""
+"""P-CAP-07 invariants for the Pulse capability-provider declaration."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 DECLARATION = ROOT / ".baobab" / "capability-provider.yaml"
+SHARED_REVISION = "363e0ead9ebb5aa87f5f813b63b785b7f63cc39e"
 
 EXPECTED_CAPABILITIES = {
     "intelligence.evidence.search",
@@ -21,7 +22,7 @@ def _declaration() -> dict[str, object]:
     return value
 
 
-def test_p_cap_06_promotes_both_canonical_capabilities_to_partial_support() -> None:
+def test_p_cap_07_promotes_both_canonical_capabilities_to_implemented() -> None:
     declaration = _declaration()
 
     assert declaration["engine"]["engine_id"] == "baobab-pulse"
@@ -35,32 +36,32 @@ def test_p_cap_06_promotes_both_canonical_capabilities_to_partial_support() -> N
     assert provider["implementation_key"] == "core"
     assert provider["simulated"] is False
     assert provider["production_permitted"] is True
+    assert provider["invocation"] == {
+        "service_reference": "service://baobab-pulse/capabilities",
+        "protocol": "http",
+    }
 
     support = provider["support"]
     assert {item["capability_key"] for item in support} == EXPECTED_CAPABILITIES
-    assert {item["implementation_status"] for item in support} == {"PARTIAL"}
+    assert {item["implementation_status"] for item in support} == {"IMPLEMENTED"}
 
     for item in support:
         assert item["contract_versions"] == [1]
         assert item["provenance"]["authority"] == {
             "repository": "baobab-platform/shared",
-            "decision": "ADR-SHARED-029",
+            "decision": "ADR-SHARED-031",
         }
+        assert item["provenance"]["source_revision"] == SHARED_REVISION
         evidence = item["implementation_evidence"]
         assert evidence
+        evidence_types = {entry["type"] for entry in evidence}
+        assert {"source", "contract-test", "integration-test"} <= evidence_types
         for entry in evidence:
             path = ROOT / entry["path"]
             assert path.exists(), f"declared implementation evidence is missing: {path}"
 
 
-def test_p_cap_06_does_not_overclaim_implemented_or_activation_authority() -> None:
-    declaration = _declaration()
-    provider = declaration["providers"][0]
-    assert all(
-        item["implementation_status"] != "IMPLEMENTED"
-        for item in provider["support"]
-    )
-
+def test_p_cap_07_does_not_overclaim_certification_or_activation_authority() -> None:
     text = DECLARATION.read_text().lower()
     for forbidden_key in (
         "pulse.evidence.search",

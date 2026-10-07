@@ -35,12 +35,17 @@ _IDEMPOTENCY_KEY = "pcap05-create-0001"
 class FakeAuthenticator:
     async def authenticate(self, access_token: str) -> AuthenticatedCaller:
         assert access_token == _TOKEN
-        return AuthenticatedCaller(subject="wl_test", client_id="pulse-tests")
+        return AuthenticatedCaller(
+            subject="wl_test",
+            client_id="pulse-tests",
+            scopes=frozenset({"intelligence:research-mission:manage"}),
+        )
 
 
 class FakeContextAuthority:
     def __init__(self, tenant_id: str) -> None:
         self.tenant_id = tenant_id
+        self.calls = 0
 
     async def redeem(
         self,
@@ -49,6 +54,7 @@ class FakeContextAuthority:
         caller: AuthenticatedCaller,
     ) -> TrustedPlatformContext:
         assert context_id == _CONTEXT_ID
+        self.calls += 1
         assert caller.subject == "wl_test"
         return TrustedPlatformContext(
             context_id=context_id,
@@ -347,3 +353,126 @@ def test_invalid_correlation_id_is_rejected_with_replacement_error_correlation()
     assert response.json()["code"] == "CAPABILITY_REQUEST_INVALID"
     replacement = UUID(response.headers["X-Correlation-Id"])
     assert response.json()["correlation_id"] == str(replacement)
+
+
+
+class RestrictedResearchAuthenticator:
+    async def authenticate(self, access_token: str) -> AuthenticatedCaller:
+        assert access_token == _TOKEN
+        return AuthenticatedCaller(
+            subject="wl_test",
+            client_id="pulse-tests",
+            scopes=frozenset(
+                {
+                    "intelligence:research-mission:manage",
+                    "intelligence:restricted",
+                }
+            ),
+        )
+
+
+def test_base_research_scope_can_create_confidential_but_not_restricted() -> None:
+    runtime, _, _ = _fixtures()
+    with TestClient(create_app(runtime)) as client:
+        confidential = client.post(
+            "/research-missions/manage",
+            json=_create_body(classification="CONFIDENTIAL"),
+            headers=_headers(idempotency_key="pcap07-confidential-01"),
+        )
+        restricted = client.post(
+            "/research-missions/manage",
+            json=_create_body(classification="RESTRICTED"),
+            headers=_headers(idempotency_key="pcap07-restricted-deny"),
+        )
+
+    assert confidential.status_code == 200
+    assert restricted.status_code == 403
+
+
+def test_restricted_clearance_can_create_restricted_mission() -> None:
+    repository = FakeResearchMissionRepository()
+    mutation_store = FakeMutationStore(repository)
+    runtime = _runtime("tn_authoritative", repository, mutation_store)
+    runtime = CapabilityApiRuntime(
+        authenticator=RestrictedResearchAuthenticator(),
+        evidence_search=runtime.evidence_search,
+        research_missions=runtime.research_missions,
+    )
+    with TestClient(create_app(runtime)) as client:
+        response = client.post(
+            "/research-missions/manage",
+            json=_create_body(classification="RESTRICTED"),
+            headers=_headers(idempotency_key="pcap07-restricted-allow"),
+        )
+
+    assert response.status_code == 200
+
+
+def test_get_above_clearance_is_non_disclosing_404() -> None:
+    repository = FakeResearchMissionRepository()
+    mutation_store = FakeMutationStore(repository)
+    restricted_runtime = _runtime("tn_authoritative", repository, mutation_store)
+    restricted_runtime = CapabilityApiRuntime(
+        authenticator=RestrictedResearchAuthenticator(),
+        evidence_search=restricted_runtime.evidence_search,
+        research_missions=restricted_runtime.research_missions,
+    )
+    with TestClient(create_app(restricted_runtime)) as client:
+        created = client.post(
+            "/research-missions/manage",
+            json=_create_body(classification="RESTRICTED"),
+            headers=_headers(idempotency_key="pcap07-restricted-read"),
+        )
+    mission_id = created.json()["id"]
+
+    base_runtime = _runtime("tn_authoritative", repository, mutation_store)
+    with TestClient(create_app(base_runtime)) as client:
+        response = client.post(
+            "/research-missions/manage",
+            json={"operation": "GET", "research_mission_id": mission_id},
+            headers=_headers(include_idempotency=False),
+        )
+
+    assert response.status_code == 404
+    assert response.json()["code"] == "RESEARCH_MISSION_NOT_FOUND"
+
+class MissingResearchScopeAuthenticator:
+    async def authenticate(self, access_token: str) -> AuthenticatedCaller:
+        assert access_token == _TOKEN
+        return AuthenticatedCaller(
+            subject="wl_test",
+            client_id="pulse-tests",
+            scopes=frozenset({"intelligence:restricted"}),
+        )
+
+
+def test_restricted_scope_alone_cannot_manage_research_or_redeem_context() -> None:
+    repository = FakeResearchMissionRepository()
+    mutation_store = FakeMutationStore(repository)
+    authority = FakeContextAuthority("tn_authoritative")
+    research = ResearchMissionManageCapabilityService(
+        context_authority=authority,
+        repository=repository,
+        mutation_store=mutation_store,
+    )
+    evidence = EvidenceSearchCapabilityService(
+        context_authority=authority,
+        retrieval=UnusedEvidenceRetrieval(),  # type: ignore[arg-type]
+    )
+    runtime = CapabilityApiRuntime(
+        authenticator=MissingResearchScopeAuthenticator(),
+        evidence_search=evidence,
+        research_missions=research,
+    )
+
+    with TestClient(create_app(runtime)) as client:
+        response = client.post(
+            "/research-missions/manage",
+            json=_create_body(classification="RESTRICTED"),
+            headers=_headers(idempotency_key="pcap07-missing-operation"),
+        )
+
+    assert response.status_code == 403
+    assert authority.calls == 0
+    assert mutation_store.commits == []
+
