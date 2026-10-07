@@ -149,3 +149,37 @@ P-CAP-07  IMPLEMENTED/readiness decision
     ↓
 P-CAP-08  EA-09 certification + Control Plane activation
 ```
+
+
+## P-CAP-06 provider-support promotion
+
+P-CAP-06 moves the two canonical Intelligence capabilities out of
+`planned_capabilities` and into the first-party provider
+`baobab-pulse.core` with `PARTIAL` implementation status.
+
+This promotion is evidence-backed:
+
+- `intelligence.evidence.search` has the exact Shared v1 contract,
+  authenticated/context-bound HTTP behavior, canonical PostgreSQL hydration,
+  Qdrant semantic projection and live PostgreSQL/Qdrant integration tests.
+- `intelligence.research-mission.manage` has the exact Shared v1 contract,
+  authenticated/context-bound CREATE/GET, durable PostgreSQL persistence,
+  idempotent CREATE, mutation audit and concurrent transactional proof.
+
+The Foundation repository lifecycle also moves from `experimental` to
+`active`, because an engine repository with real provider support is no longer
+a planned-only experimental repository. This is not Control Plane provider
+activation.
+
+PARTIAL remains the capability-support ceiling because the production ASGI
+composition still has no injected `CapabilityApiRuntime`, concrete production
+IAM and Control Plane authority adapters are not wired, evidence-search
+classification authority is conservatively capped at TENANT, and the
+ResearchMission producer event remains HELD_UNREGISTERED.
+
+The provider declaration is implementation traceability only. It does not
+certify, activate, bind, grant or route the provider. Shared registration
+generation deliberately ignores PARTIAL support.
+
+P-CAP-07 is the next readiness decision and must reassess these blockers before
+any move to IMPLEMENTED.
