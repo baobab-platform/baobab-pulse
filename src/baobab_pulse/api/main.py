@@ -15,6 +15,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from baobab_pulse.api.composition import build_capability_runtime
 from baobab_pulse.api.dependencies import get_database, get_settings
 from baobab_pulse.api.error_handlers import register_error_handlers
 from baobab_pulse.api.middleware import TenancyMiddleware
@@ -61,4 +62,4 @@ def create_app(runtime: CapabilityApiRuntime | None = None) -> FastAPI:
     return app
 
 
-app = create_app()
+app = create_app(build_capability_runtime())
