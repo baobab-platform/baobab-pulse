@@ -2,6 +2,10 @@
 
 from uuid import UUID
 
+from baobab_pulse.application.intelligence_authority import (
+    EVIDENCE_SEARCH_SCOPE,
+    classification_clearance,
+)
 from baobab_pulse.application.ports.authentication import AuthenticatedCaller
 from baobab_pulse.application.ports.context_authority import (
     ContextAccessDeniedError,
@@ -14,7 +18,6 @@ from baobab_pulse.application.services.evidence_retrieval_service import (
     EvidenceRetrievalService,
     HydratedEvidenceCandidate,
 )
-from baobab_pulse.domain.shared.enums import Classification
 from baobab_pulse.domain.shared.errors import (
     CapabilityAccessDeniedError,
     CapabilityAuthenticationError,
@@ -23,13 +26,6 @@ from baobab_pulse.domain.shared.errors import (
 )
 from baobab_pulse.domain.shared.value_objects import TenantContext
 from baobab_pulse.tenancy.context import bind_tenant_context
-
-# No canonical IAM/Control Plane contract currently grants a caller-selected
-# CONFIDENTIAL/RESTRICTED clearance. A successfully validated tenant context
-# therefore authorises only the conservative tenant baseline. Higher clearance
-# requires a future explicit authority contract; it is never inferred here.
-_CANONICAL_CLEARANCE = Classification.TENANT
-
 
 class EvidenceSearchCapabilityService:
     """Bind canonical evidence search to the authenticated caller's CP context."""
@@ -74,6 +70,10 @@ class EvidenceSearchCapabilityService:
                 "Control Plane context validation is unavailable"
             ) from exc
 
+        clearance = classification_clearance(
+            caller,
+            required_scope=EVIDENCE_SEARCH_SCOPE,
+        )
         tenant_context = TenantContext(
             tenant_id=trusted.tenant_id,
             context_id=str(trusted.context_id),
@@ -82,7 +82,7 @@ class EvidenceSearchCapabilityService:
         with bind_tenant_context(tenant_context):
             return await self._retrieval.search(
                 query_text,
-                requester_clearance=_CANONICAL_CLEARANCE,
+                requester_clearance=clearance,
                 evidence_set_id=evidence_set_id,
                 top_k=top_k,
             )
