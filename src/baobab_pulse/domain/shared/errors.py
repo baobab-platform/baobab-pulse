@@ -59,3 +59,27 @@ class ProjectionRebuildFailed(PulseError):
     through. The rebuild workflow is designed to be safely re-run: a
     partial rebuild leaves canonical PostgreSQL data untouched and callers
     can re-invoke the rebuild once the underlying cause is fixed."""
+
+
+class CapabilityInvalidRequestError(PulseError):
+    """Canonical capability invocation metadata is malformed or missing."""
+
+
+class CapabilityAuthenticationError(PulseError):
+    """The inbound caller could not be authenticated."""
+
+
+class CapabilityAccessDeniedError(PulseError):
+    """The authenticated caller is not authorised for the requested context."""
+
+
+class CapabilityContextNotFoundError(PulseError):
+    """The caller-bound Control Plane context is unavailable."""
+
+
+class CapabilityAuthorityUnavailableError(PulseError):
+    """A required IAM or Control Plane authority is unavailable."""
+
+
+class CapabilityRuntimeUnavailableError(PulseError):
+    """The canonical capability runtime has not been configured."""
