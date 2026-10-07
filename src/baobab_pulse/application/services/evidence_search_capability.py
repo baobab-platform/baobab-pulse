@@ -27,6 +27,7 @@ from baobab_pulse.domain.shared.errors import (
 from baobab_pulse.domain.shared.value_objects import TenantContext
 from baobab_pulse.tenancy.context import bind_tenant_context
 
+
 class EvidenceSearchCapabilityService:
     """Bind canonical evidence search to the authenticated caller's CP context."""
 
