@@ -7,7 +7,7 @@ repository:
   maturity: IMPLEMENTED_CONSUMER
 shared:
   repository: baobab-platform/shared
-  commit: "363e0ead9ebb5aa87f5f813b63b785b7f63cc39e"
+  commit: "f61de9c5141e432b32cc3b585aafa7d1b6727716"
   required_contracts:
     - contracts/authorization/v1/scope-registry.yaml
     - contracts/identity/v1/workload-registry.yaml
