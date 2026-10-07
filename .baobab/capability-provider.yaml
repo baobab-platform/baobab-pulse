@@ -20,11 +20,11 @@ planned_capabilities:
   - capability_key: intelligence.evidence.search
     proposal_status: CONTRACTED
     description: >-
-      Adopt the Shared v1 intelligence evidence-search contract. Current Pulse
-      has substantial retrieval implementation evidence, but canonical provider
-      support remains intentionally undeclared until tenant/principal authority
-      and classification clearance are derived from authenticated platform
-      context rather than caller-selected trust inputs.
+      Adopt the Shared v1 intelligence evidence-search contract. P-CAP-03 now
+      provides the authenticated, caller-bound canonical adapter: tenant
+      authority comes from validated Control Plane context and caller-selected
+      clearance is rejected. Provider support remains intentionally undeclared
+      until the later P-CAP promotion decision and certification sequence.
     provenance:
       authority:
         repository: baobab-platform/shared
