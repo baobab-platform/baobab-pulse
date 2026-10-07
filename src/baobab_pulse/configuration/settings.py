@@ -85,6 +85,19 @@ class Settings(BaseSettings):
     embedding_model_id: str = "mock-model"
     embedding_dimension: int = 768
 
+    # -- P-CAP-07 production capability authority -------------------------
+    iam_issuer_url: str | None = None
+    iam_jwks_url: str | None = None
+    iam_token_url: str | None = None
+    iam_client_id: str = "baobab-pulse-workload"
+    iam_client_secret: SecretStr | None = None
+    iam_resource_audience: str = "baobab-pulse"
+    iam_jwt_algorithm: str = "RS256"
+    iam_max_token_lifetime_seconds: int = 900
+    iam_clock_skew_seconds: int = 30
+    control_plane_context_validation_url: str | None = None
+    authority_http_timeout_seconds: float = 5.0
+
     api_host: str = "0.0.0.0"  # noqa: S104 -- container-internal bind, fronted by an ingress/load balancer
     api_port: int = 8000
 
