@@ -9,23 +9,20 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from baobab_pulse.domain.shared.enums import Classification
-
 
 class EvidenceSearchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     query_text: str = Field(min_length=1, max_length=2000)
-    requester_clearance: Classification = Classification.TENANT
-    evidence_set_id: str | None = None
+    evidence_set_id: str | None = Field(default=None, min_length=1, max_length=128)
     top_k: int = Field(default=10, ge=1, le=100)
 
 
 class EvidenceCandidateResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    canonical_object_id: str
-    evidence_set_id: str
+    canonical_object_id: str = Field(min_length=1, max_length=128)
+    evidence_set_id: str = Field(min_length=1, max_length=128)
     score: float
     is_stale: bool
 
@@ -33,4 +30,4 @@ class EvidenceCandidateResponse(BaseModel):
 class EvidenceSearchResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    candidates: tuple[EvidenceCandidateResponse, ...]
+    candidates: tuple[EvidenceCandidateResponse, ...] = Field(max_length=100)
