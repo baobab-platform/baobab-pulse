@@ -10,6 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -223,6 +224,14 @@ class HttpControlPlaneContextAuthority:
             raise ContextAuthorityUnavailableError(
                 "Control Plane returned an unbounded context"
             )
+        try:
+            expiry = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ContextAuthorityUnavailableError(
+                "Control Plane returned an invalid context expiry"
+            ) from exc
+        if expiry.tzinfo is None or expiry <= datetime.now(UTC):
+            raise ContextNotFoundError("context is unavailable")
         organisation_id = payload.get("organisation_id")
         market_id = payload.get("market_id")
         if organisation_id is not None and not isinstance(organisation_id, str):
