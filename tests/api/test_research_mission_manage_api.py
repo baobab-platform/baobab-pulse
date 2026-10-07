@@ -45,6 +45,7 @@ class FakeAuthenticator:
 class FakeContextAuthority:
     def __init__(self, tenant_id: str) -> None:
         self.tenant_id = tenant_id
+        self.calls = 0
 
     async def redeem(
         self,
@@ -53,6 +54,7 @@ class FakeContextAuthority:
         caller: AuthenticatedCaller,
     ) -> TrustedPlatformContext:
         assert context_id == _CONTEXT_ID
+        self.calls += 1
         assert caller.subject == "wl_test"
         return TrustedPlatformContext(
             context_id=context_id,
@@ -433,3 +435,44 @@ def test_get_above_clearance_is_non_disclosing_404() -> None:
 
     assert response.status_code == 404
     assert response.json()["code"] == "RESEARCH_MISSION_NOT_FOUND"
+
+class MissingResearchScopeAuthenticator:
+    async def authenticate(self, access_token: str) -> AuthenticatedCaller:
+        assert access_token == _TOKEN
+        return AuthenticatedCaller(
+            subject="wl_test",
+            client_id="pulse-tests",
+            scopes=frozenset({"intelligence:restricted"}),
+        )
+
+
+def test_restricted_scope_alone_cannot_manage_research_or_redeem_context() -> None:
+    repository = FakeResearchMissionRepository()
+    mutation_store = FakeMutationStore(repository)
+    authority = FakeContextAuthority("tn_authoritative")
+    research = ResearchMissionManageCapabilityService(
+        context_authority=authority,
+        repository=repository,
+        mutation_store=mutation_store,
+    )
+    evidence = EvidenceSearchCapabilityService(
+        context_authority=authority,
+        retrieval=UnusedEvidenceRetrieval(),  # type: ignore[arg-type]
+    )
+    runtime = CapabilityApiRuntime(
+        authenticator=MissingResearchScopeAuthenticator(),
+        evidence_search=evidence,
+        research_missions=research,
+    )
+
+    with TestClient(create_app(runtime)) as client:
+        response = client.post(
+            "/research-missions/manage",
+            json=_create_body(classification="RESTRICTED"),
+            headers=_headers(idempotency_key="pcap07-missing-operation"),
+        )
+
+    assert response.status_code == 403
+    assert authority.calls == 0
+    assert mutation_store.commits == []
+
