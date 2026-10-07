@@ -39,8 +39,8 @@ jobs:
           )"
           [[ "$tag" == "v${version}-staging" ]]
 
-          git fetch --no-tags origin main:refs/remotes/origin/main
-          [[ "$(git rev-parse origin/main)" == "$GITHUB_SHA" ]]
+          main_sha="$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)"
+          [[ "$main_sha" == "$GITHUB_SHA" ]]
 
           gh run list \
             --repo "$GITHUB_REPOSITORY" \
