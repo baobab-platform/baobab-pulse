@@ -1,13 +1,10 @@
 # .baobab/capability-provider.yaml
 #
-# Pulse capability-provider declaration following ADR-SHARED-029.
+# P-CAP-06 evidence-backed provider-support declaration.
 #
-# IMPORTANT:
-# - Shared owns canonical capability vocabulary.
-# - This census adoption declares only CONTRACTED intent.
-# - No providers[].support entry exists yet.
-# - Certification, runtime activation, bindings, grants and resolution remain
-#   separate EA-09 / Control Plane concerns.
+# Shared owns capability vocabulary and contract semantics. This repository
+# declares only implementation evidence. PARTIAL is not certification,
+# activation, binding, grant, health, routing or production readiness.
 
 schema:
   name: baobab-capability-provider-declaration
@@ -16,31 +13,94 @@ schema:
 engine:
   engine_id: baobab-pulse
 
-planned_capabilities:
-  - capability_key: intelligence.evidence.search
-    proposal_status: CONTRACTED
+providers:
+  - provider_key: baobab-pulse.core
+    name: Baobab Pulse core provider
     description: >-
-      Adopt the Shared v1 intelligence evidence-search contract. P-CAP-03 now
-      provides the authenticated, caller-bound canonical adapter: tenant
-      authority comes from validated Control Plane context and caller-selected
-      clearance is rejected. Provider support remains intentionally undeclared
-      until the later P-CAP promotion decision and certification sequence.
+      First-party provider for canonical Intelligence evidence search and
+      research-mission management. P-CAP-03 through P-CAP-05 provide executable
+      authenticated/context-bound adapters, durable PostgreSQL state, canonical
+      evidence hydration, mutation idempotency and audit semantics. Support is
+      deliberately PARTIAL because production IAM/Control Plane adapters and
+      composition wiring are not yet present, higher classification authority is
+      not yet contractually available, and the Intelligence producer event
+      context remains unregistered.
+    provider_type: BAOBAB_ENGINE
+    implementation_key: core
+    simulated: false
+    production_permitted: true
     provenance:
       authority:
-        repository: baobab-platform/shared
-        decision: ADR-SHARED-029
-      source_revision: 2d14087727682d454f7140ba65aa97625454991b
+        repository: baobab-platform/baobab-pulse
+        decision: ADR-PULSE-017
+    support:
+      - capability_key: intelligence.evidence.search
+        contract_versions: [1]
+        implementation_status: PARTIAL
+        provenance:
+          authority:
+            repository: baobab-platform/shared
+            decision: ADR-SHARED-029
+          source_revision: 7d5b89ccd67bca54ebe65677f390e964f6d3e07e
+        implementation_evidence:
+          - type: source
+            path: src/baobab_pulse/application/services/evidence_search_capability.py
+            description: Caller-bound Control Plane context redemption and trusted tenant binding for the canonical evidence-search operation.
+          - type: source
+            path: src/baobab_pulse/application/services/evidence_retrieval_service.py
+            description: Semantic retrieval followed by canonical PostgreSQL hydration, stale/orphan filtering and classification enforcement.
+          - type: source
+            path: src/baobab_pulse/infrastructure/persistence/evidence_repository.py
+            description: Canonical PostgreSQL EvidenceSet persistence used to hydrate semantic projection hits.
+          - type: source
+            path: src/baobab_pulse/infrastructure/haystack/document_stores/qdrant_projection_store.py
+            description: Rebuildable tenant-scoped semantic projection implementation with canonical identity/version metadata.
+          - type: source
+            path: src/baobab_pulse/api/routers/evidence.py
+            description: Authenticated canonical HTTP route for intelligence.evidence.search.
+          - type: contract-test
+            path: tests/contract/test_evidence_search_capability_contract.py
+            description: Exact Shared v1 request/response schema proof.
+          - type: test
+            path: tests/api/test_evidence_search_api.py
+            description: Authentication, caller-bound context, malicious tenant-header rejection and fail-closed authority behavior.
+          - type: integration-test
+            path: tests/integration/test_evidence_postgres_qdrant_roundtrip.py
+            description: Live PostgreSQL plus Qdrant canonical-hydration and semantic-projection roundtrip proof.
 
-  - capability_key: intelligence.research-mission.manage
-    proposal_status: CONTRACTED
-    description: >-
-      Adopt the Shared v1 research-mission management contract. P-CAP-04 provides
-      authenticated, caller-bound durable CREATE/GET. P-CAP-05 adds atomic
-      idempotency, mutation audit provenance and a HELD_UNREGISTERED transactional
-      outbox candidate for CREATE. Provider support remains intentionally
-      undeclared until the P-CAP-06 evidence-backed promotion decision.
-    provenance:
-      authority:
-        repository: baobab-platform/shared
-        decision: ADR-SHARED-029
-      source_revision: 2d14087727682d454f7140ba65aa97625454991b
+      - capability_key: intelligence.research-mission.manage
+        contract_versions: [1]
+        implementation_status: PARTIAL
+        provenance:
+          authority:
+            repository: baobab-platform/shared
+            decision: ADR-SHARED-029
+          source_revision: 7d5b89ccd67bca54ebe65677f390e964f6d3e07e
+        implementation_evidence:
+          - type: source
+            path: src/baobab_pulse/application/services/research_mission_manage_capability.py
+            description: Caller/context-bound canonical CREATE/GET orchestration under trusted tenant authority.
+          - type: source
+            path: src/baobab_pulse/infrastructure/persistence/research_mission_repository.py
+            description: Durable structurally tenant-scoped PostgreSQL ResearchMission reads.
+          - type: source
+            path: src/baobab_pulse/infrastructure/persistence/research_mission_mutation.py
+            description: Atomic CREATE mutation store covering mission, idempotency, audit and HELD event candidate.
+          - type: source
+            path: migrations/0004_research_mission_mutation_governance.sql
+            description: Durable idempotency, mutation-audit and held-outbox persistence constraints.
+          - type: source
+            path: src/baobab_pulse/api/routers/research_missions.py
+            description: Authenticated canonical HTTP route for intelligence.research-mission.manage.
+          - type: contract-test
+            path: tests/contract/test_research_mission_capability_contract.py
+            description: Exact Shared v1 CREATE/GET/response contract proof.
+          - type: test
+            path: tests/api/test_research_mission_manage_api.py
+            description: Tenant authority, idempotent replay, conflict, correlation and access-boundary proof.
+          - type: integration-test
+            path: tests/integration/test_research_mission_postgres_roundtrip.py
+            description: Live PostgreSQL durable ResearchMission persistence and cross-tenant invisibility proof.
+          - type: integration-test
+            path: tests/integration/test_research_mission_mutation_governance.py
+            description: Concurrent idempotency convergence plus one mission, audit and HELD outbox candidate proof.
