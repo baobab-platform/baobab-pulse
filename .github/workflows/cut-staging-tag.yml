@@ -70,12 +70,13 @@ jobs:
           set -euo pipefail
 
           if ref_json="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$tag" 2>/dev/null)"; then
-            python - "$GITHUB_SHA" <<'PY' <<<"$ref_json"
-          import json, sys
-          expected = sys.argv[1]
-          value = json.load(sys.stdin)
+            REF_JSON="$ref_json" EXPECTED_SHA="$GITHUB_SHA" python - <<'PY'
+          import json
+          import os
+
+          value = json.loads(os.environ["REF_JSON"])
           obj = value["object"]
-          if obj["type"] != "commit" or obj["sha"] != expected:
+          if obj["type"] != "commit" or obj["sha"] != os.environ["EXPECTED_SHA"]:
               raise SystemExit("existing staging tag is not the exact requested immutable commit")
           PY
           else
