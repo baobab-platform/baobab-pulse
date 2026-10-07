@@ -17,7 +17,6 @@ from baobab_pulse.application.services.research_mission_manage_capability import
     ResearchMissionManageCapabilityService,
 )
 from baobab_pulse.domain.research import ResearchMission
-from baobab_pulse.domain.shared.enums import Classification
 from baobab_pulse.domain.shared.errors import SemanticRetrievalUnavailable
 
 _TOKEN = "test-workload-token-123456"
