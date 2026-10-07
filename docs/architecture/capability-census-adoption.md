@@ -166,11 +166,16 @@ This promotion is evidence-backed:
   authenticated/context-bound CREATE/GET, durable PostgreSQL persistence,
   idempotent CREATE, mutation audit and concurrent transactional proof.
 
-PARTIAL remains the ceiling because the production ASGI composition still has
-no injected `CapabilityApiRuntime`, concrete production IAM and Control Plane
-authority adapters are not wired, evidence-search classification authority is
-conservatively capped at TENANT, and the ResearchMission producer event remains
-HELD_UNREGISTERED.
+The Foundation repository lifecycle also moves from `experimental` to
+`active`, because an engine repository with real provider support is no longer
+a planned-only experimental repository. This is not Control Plane provider
+activation.
+
+PARTIAL remains the capability-support ceiling because the production ASGI
+composition still has no injected `CapabilityApiRuntime`, concrete production
+IAM and Control Plane authority adapters are not wired, evidence-search
+classification authority is conservatively capped at TENANT, and the
+ResearchMission producer event remains HELD_UNREGISTERED.
 
 The provider declaration is implementation traceability only. It does not
 certify, activate, bind, grant or route the provider. Shared registration
