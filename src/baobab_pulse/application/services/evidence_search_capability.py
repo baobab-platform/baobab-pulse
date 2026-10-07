@@ -48,6 +48,10 @@ class EvidenceSearchCapabilityService:
         evidence_set_id: str | None,
         top_k: int,
     ) -> tuple[HydratedEvidenceCandidate, ...]:
+        clearance = classification_clearance(
+            caller,
+            required_scope=EVIDENCE_SEARCH_SCOPE,
+        )
         try:
             trusted = await self._context_authority.redeem(
                 context_id=context_id,
@@ -70,10 +74,6 @@ class EvidenceSearchCapabilityService:
                 "Control Plane context validation is unavailable"
             ) from exc
 
-        clearance = classification_clearance(
-            caller,
-            required_scope=EVIDENCE_SEARCH_SCOPE,
-        )
         tenant_context = TenantContext(
             tenant_id=trusted.tenant_id,
             context_id=str(trusted.context_id),
