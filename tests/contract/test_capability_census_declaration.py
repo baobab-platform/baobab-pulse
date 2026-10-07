@@ -1,4 +1,4 @@
-"""P-CAP-07 invariants for the Pulse capability-provider declaration."""
+"""Capability declaration invariants through P-CAP-08."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 DECLARATION = ROOT / ".baobab" / "capability-provider.yaml"
-SHARED_REVISION = "363e0ead9ebb5aa87f5f813b63b785b7f63cc39e"
+SHARED_REVISION = "f61de9c5141e432b32cc3b585aafa7d1b6727716"
 
 EXPECTED_CAPABILITIES = {
     "intelligence.evidence.search",
@@ -22,7 +22,7 @@ def _declaration() -> dict[str, object]:
     return value
 
 
-def test_p_cap_07_promotes_both_canonical_capabilities_to_implemented() -> None:
+def test_p_cap_07_implemented_evidence_survives_p_cap_08_governance() -> None:
     declaration = _declaration()
 
     assert declaration["engine"]["engine_id"] == "baobab-pulse"
@@ -49,7 +49,7 @@ def test_p_cap_07_promotes_both_canonical_capabilities_to_implemented() -> None:
         assert item["contract_versions"] == [1]
         assert item["provenance"]["authority"] == {
             "repository": "baobab-platform/shared",
-            "decision": "ADR-SHARED-031",
+            "decision": "ADR-SHARED-032",
         }
         assert item["provenance"]["source_revision"] == SHARED_REVISION
         evidence = item["implementation_evidence"]
