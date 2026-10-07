@@ -15,6 +15,12 @@ from fastapi.responses import JSONResponse
 
 from baobab_pulse.contracts.errors import ProblemDetails
 from baobab_pulse.domain.shared.errors import (
+    CapabilityAccessDeniedError,
+    CapabilityAuthenticationError,
+    CapabilityAuthorityUnavailableError,
+    CapabilityContextNotFoundError,
+    CapabilityInvalidRequestError,
+    CapabilityRuntimeUnavailableError,
     InvariantViolation,
     ProjectionRebuildFailed,
     ProjectionWriteFailed,
@@ -28,6 +34,12 @@ from baobab_pulse.infrastructure.haystack.errors import PulseHaystackError
 logger = logging.getLogger(__name__)
 
 _STATUS_BY_ERROR: tuple[tuple[type[PulseError], int, str, bool], ...] = (
+    (CapabilityInvalidRequestError, 400, "CAPABILITY_REQUEST_INVALID", False),
+    (CapabilityAuthenticationError, 401, "AUTH_TOKEN_INVALID", False),
+    (CapabilityAccessDeniedError, 403, "CAPABILITY_ACCESS_DENIED", False),
+    (CapabilityContextNotFoundError, 404, "CONTEXT_NOT_FOUND", False),
+    (CapabilityAuthorityUnavailableError, 503, "CAPABILITY_AUTHORITY_UNAVAILABLE", True),
+    (CapabilityRuntimeUnavailableError, 503, "CAPABILITY_RUNTIME_UNAVAILABLE", True),
     (TenantContextMissingError, 400, "TENANT_CONTEXT_MISSING", False),
     (InvariantViolation, 422, "DOMAIN_INVARIANT_VIOLATION", False),
     # Semantic retrieval/projection failures are Qdrant-specific and
