@@ -11,6 +11,6 @@ permissions:
 
 jobs:
   rtd-conformance:
-    uses: baobab-platform/shared/.github/workflows/rtd-cross-repository-conformance.yml@6e0267572edb533ce781b2a7fc6863918ca2d62e
+    uses: baobab-platform/shared/.github/workflows/rtd-cross-repository-conformance.yml@2d14087727682d454f7140ba65aa97625454991b
     secrets:
       SHARED_READ_TOKEN: ${{ secrets.SHARED_READ_TOKEN }}
