@@ -24,9 +24,12 @@ shared:
 evidence:
   adr_paths:
     - docs/adr/ADR-PULSE-013 — Upstream Intelligence Projection, Cross-Engine Reference and Non-Enforcement Consumer Architecture.md
+    - docs/adr/ADR-PULSE-014 — Authenticated Context-Bound Evidence Search Capability.md
   source_paths:
     - src/baobab_pulse/application/services/upstream_fact_projection_service.py
+    - src/baobab_pulse/application/services/evidence_search_capability.py
     - src/baobab_pulse/domain/projections/models.py
   test_paths:
     - tests/architecture/test_rtd09_boundaries.py
     - tests/contract/test_rtd09_upstream_contracts.py
+    - tests/contract/test_evidence_search_capability_contract.py
