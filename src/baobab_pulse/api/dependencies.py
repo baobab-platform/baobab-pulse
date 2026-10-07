@@ -22,10 +22,10 @@ from baobab_pulse.application.ports.authentication import (
     WorkloadAuthenticationUnavailableError,
 )
 from baobab_pulse.application.ports.vector_projection_port import ProjectionCollection
-from baobab_pulse.contracts.mutations import validate_idempotency_key
 from baobab_pulse.application.services.evidence_retrieval_service import EvidenceRetrievalService
 from baobab_pulse.application.services.research_mission_service import ResearchMissionService
 from baobab_pulse.configuration.settings import Settings
+from baobab_pulse.contracts.mutations import validate_idempotency_key
 from baobab_pulse.domain.shared.errors import (
     CapabilityAuthenticationError,
     CapabilityAuthorityUnavailableError,
@@ -124,7 +124,6 @@ def get_evidence_retrieval_service() -> EvidenceRetrievalService:
     )
 
 
-
 @dataclass(frozen=True, slots=True)
 class AuthenticatedCapabilityRequest:
     """Verified caller plus the canonical capability runtime."""
@@ -199,7 +198,6 @@ async def require_context_id(
         raise CapabilityInvalidRequestError(
             "X-Baobab-Context-Id must be a UUID"
         ) from exc
-
 
 
 async def get_capability_request_metadata(
