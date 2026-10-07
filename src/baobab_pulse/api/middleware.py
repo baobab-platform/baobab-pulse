@@ -34,7 +34,11 @@ class TenancyMiddleware(BaseHTTPMiddleware):
         # P-CAP-03: the canonical evidence capability must not even transiently
         # bind caller-selected tenant authority. Its application adapter binds
         # the Control-Plane-validated tenant in a nested, request-local context.
-        tenant_id = None if request.url.path == "/evidence/search" else request.headers.get(_TENANT_HEADER)
+        canonical_context_bound = request.url.path in {
+            "/evidence/search",
+            "/research-missions/manage",
+        }
+        tenant_id = None if canonical_context_bound else request.headers.get(_TENANT_HEADER)
         context = bind_tenant_context(TenantContext(tenant_id=tenant_id)) if tenant_id else nullcontext()
         with context:
             response = await call_next(request)
