@@ -1,0 +1,45 @@
+# .baobab/capability-provider.yaml
+#
+# Pulse capability-provider declaration following ADR-SHARED-029.
+#
+# IMPORTANT:
+# - Shared owns canonical capability vocabulary.
+# - This census adoption declares only CONTRACTED intent.
+# - No providers[].support entry exists yet.
+# - Certification, runtime activation, bindings, grants and resolution remain
+#   separate EA-09 / Control Plane concerns.
+
+schema:
+  name: baobab-capability-provider-declaration
+  version: "1.0"
+
+engine:
+  engine_id: baobab-pulse
+
+planned_capabilities:
+  - capability_key: intelligence.evidence.search
+    proposal_status: CONTRACTED
+    description: >-
+      Adopt the Shared v1 intelligence evidence-search contract. Current Pulse
+      has substantial retrieval implementation evidence, but canonical provider
+      support remains intentionally undeclared until tenant/principal authority
+      and classification clearance are derived from authenticated platform
+      context rather than caller-selected trust inputs.
+    provenance:
+      authority:
+        repository: baobab-platform/shared
+        decision: ADR-SHARED-029
+      source_revision: e894746243b7e9f65e834b39a6c4cd6504f24179
+
+  - capability_key: intelligence.research-mission.manage
+    proposal_status: CONTRACTED
+    description: >-
+      Adopt the Shared v1 research-mission management contract. Current Pulse
+      exposes create/get verification routes, but the mission repository remains
+      in-memory and the implementation is explicitly a reference/scaffold slice;
+      provider support therefore remains a later evidence-backed promotion.
+    provenance:
+      authority:
+        repository: baobab-platform/shared
+        decision: ADR-SHARED-029
+      source_revision: e894746243b7e9f65e834b39a6c4cd6504f24179
