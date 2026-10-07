@@ -18,8 +18,8 @@ from fastapi import FastAPI
 from baobab_pulse.api.dependencies import get_database, get_settings
 from baobab_pulse.api.error_handlers import register_error_handlers
 from baobab_pulse.api.middleware import TenancyMiddleware
-from baobab_pulse.api.runtime import CapabilityApiRuntime
 from baobab_pulse.api.routers import evidence, health, research_missions
+from baobab_pulse.api.runtime import CapabilityApiRuntime
 from baobab_pulse.infrastructure.observability.logging_config import configure_logging
 from baobab_pulse.infrastructure.observability.telemetry import configure_telemetry
 
