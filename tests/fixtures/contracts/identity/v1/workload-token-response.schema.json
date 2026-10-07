@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/identity/v1/workload-token-response.schema.json",
+  "title": "Workload Token Response",
+  "description": "Short-lived Baobab workload access token (ADR-0006 token profile, ADR-0007 workload identity). The same shape whichever provider issues it and whichever credential mechanism the workload used (ADR-IAM-0019, ADR-IAM-0020).",
+  "$defs": {
+    "WorkloadTokenResponse": {
+      "type": "object",
+      "required": [
+        "access_token",
+        "token_type",
+        "expires_in"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "access_token": {
+          "type": "string",
+          "minLength": 20,
+          "description": "Bearer access token (a JWT per the ADR-0006 profile) whose claims are WorkloadTokenClaims. A resource server accepts it only after verifying issuer, audience, actor_type and scope itself."
+        },
+        "token_type": {
+          "const": "Bearer",
+          "description": "Token type (always 'Bearer')"
+        },
+        "expires_in": {
+          "type": "integer",
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Token lifetime in seconds. Workload tokens are short-lived and are re-obtained, never refreshed."
+        },
+        "scope": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Granted scope (may differ from requested)"
+        }
+      }
+    },
+    "WorkloadTokenClaims": {
+      "type": "object",
+      "description": "Claims a workload access token carries (ADR-0006, ADR-0007). Canonical identity is issuer + subject (ExternalIdentity -> Principal); no claim names the provider or its implementation.",
+      "properties": {
+        "iss": {
+          "type": "string",
+          "format": "uri",
+          "description": "Issuer URI of the provider that issued the token; a resource server trusts only configured issuers."
+        },
+        "sub": {
+          "type": "string",
+          "description": "Issuer-local subject of the workload. With iss it resolves to the canonical workload Principal."
+        },
+        "aud": {
+          "type": [
+            "string",
+            "array"
+          ],
+          "description": "Logical audience(s): the resource server(s) from the workload's allowed_audiences."
+        },
+        "azp": {
+          "type": "string",
+          "description": "Authorized party: the issuer-local identifier of the workload's registration at the provider."
+        },
+        "actor_type": {
+          "const": "workload",
+          "description": "Actor classification (always 'workload')"
+        },
+        "scope": {
+          "type": "string",
+          "description": "Granted scopes (space-separated, e.g. 'context:resolve trades:read')"
+        },
+        "iat": {
+          "type": "integer",
+          "description": "Issued-at timestamp (seconds since epoch)"
+        },
+        "exp": {
+          "type": "integer",
+          "description": "Expiration timestamp (seconds since epoch)"
+        }
+      }
+    }
+  },
+  "$ref": "#/$defs/WorkloadTokenResponse"
+}
