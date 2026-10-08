@@ -69,7 +69,7 @@ jobs:
           done < <(sed -n 's/^  - \(contracts\/.*\)$/\1/p' contracts.lock.yaml)
 
       - name: Install uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6 (verified live 2026-08-25)
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v6 (verified live 2026-08-25)
         with:
           enable-cache: true
 
