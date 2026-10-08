@@ -371,6 +371,17 @@ scopes:
     allowed_actors: ["human"]
     privileged: true
 
+  - name: "provider:certify"
+    description: >-
+      Record or revoke an EA-09 ProviderCapabilityCertification for one exact
+      provider, canonical capability contract major and EngineRelease. The
+      Control Plane verifies provider/release ownership, declared support,
+      release support and maker/checker separation. Certification grants no
+      activation, binding, grant or tenant entitlement.
+    audience: ["baobab-control-plane"]
+    allowed_actors: ["human"]
+    privileged: true
+
   - name: "engine-release:approve"
     description: >-
       Approve the plan of an ENGINE_RELEASE_APPROVAL changeset, the only
