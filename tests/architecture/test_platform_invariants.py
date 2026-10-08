@@ -9,6 +9,7 @@ remaining three plus a credential-free smoke check for #6.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from haystack.components.generators.chat import MockChatGenerator
@@ -126,4 +127,6 @@ def test_10_repository_builds_reproducibly_from_documented_inputs() -> None:
 
     pyproject = (repo_root / "pyproject.toml").read_text(encoding="utf-8")
     assert 'requires-python = ">=3.14"' in pyproject
-    assert 'haystack-ai==3.1.1' in pyproject, "the Haystack version must be pinned, not left floating"
+    # An exact pin, whichever version it is: a version bump (Dependabot included) must not need this test edited, but a floating
+    # range must still fail it.
+    assert re.search(r'"haystack-ai==\d+(\.\d+)*"', pyproject), "the Haystack version must be pinned, not left floating"
