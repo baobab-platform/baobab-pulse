@@ -71,6 +71,49 @@ for the full reasoning, and
 `tests/integration/test_haystack_reference_pipeline.py` for this exact flow
 executing deterministically.
 
+## Qdrant semantic-retrieval projection
+
+PostgreSQL remains canonical; Qdrant is a rebuildable projection, never the
+other way around. The same anti-corruption discipline as the Haystack
+boundary above applies — `qdrant_client`/`haystack_integrations` types stay
+inside one adapter module:
+
+```mermaid
+graph TD
+    PG[("PostgreSQL<br/>(canonical: EvidenceSet, Evidence)")]
+    Rebuild["scripts/rebuild_projection.py<br/>(make rebuild-projection)"]
+    EmbedPort["EmbeddingPort<br/>(application.ports, a Protocol)"]
+    VecPort["VectorProjectionPort<br/>(application.ports, a Protocol)"]
+    Adapter["QdrantEvidenceProjectionStore<br/>(infrastructure.haystack.document_stores —<br/>the ONLY module that imports qdrant_client)"]
+    Qdrant[("Qdrant<br/>(derived projection, versioned collection)")]
+
+    PG -->|"resolve text"| Rebuild
+    Rebuild --> EmbedPort
+    Rebuild --> VecPort
+    VecPort --> Adapter
+    EmbedPort --> Adapter
+    Adapter --> Qdrant
+
+    Query["EvidenceRetrievalService.search()<br/>(application)"] -->|"1. require_tenant_context()<br/>fail closed if unbound"| Query
+    Query -->|"2. SemanticRetrievalPort.retrieve_evidence()"| SemPort["SemanticRetrievalPort<br/>(application.ports, a Protocol)"]
+    SemPort --> Adapter
+    Adapter -->|"tenant + classification filter,<br/>built BEFORE the query is issued"| Qdrant
+    Qdrant -->|"SemanticCandidate<br/>(canonical_object_id, canonical_version, score)"| Query
+    Query -->|"3. compare canonical_version<br/>against PostgreSQL's current version"| PG
+    Query -->|"4. hydrate_for_pipeline():<br/>text read back from PostgreSQL,<br/>never from Qdrant's cached payload"| PG
+```
+
+A missing tenant context, a stale projection (`canonical_version` behind
+PostgreSQL's current version), or an unreachable Qdrant never produce an
+unrestricted/unverified result — they fail closed, flag staleness, or
+degrade to a typed, retryable error (`SemanticRetrievalUnavailable`/
+`VectorStoreUnavailable`) respectively. See
+`docs/adr/ADR-PULSE-011 — Qdrant Vector Retrieval and Semantic Projection Architecture.md`
+for the full reasoning, and
+`tests/integration/test_qdrant_evidence_projection_store.py` /
+`tests/integration/test_evidence_postgres_qdrant_roundtrip.py` for this flow
+executing against real (embedded/live) Qdrant and PostgreSQL.
+
 ## Deployment topology
 
 ```mermaid
@@ -85,17 +128,20 @@ graph TD
         Scheduler["Acquisition scheduling"]
     end
 
-    API --> PG[("PostgreSQL 17")]
+    API --> PG[("PostgreSQL 17<br/>(canonical)")]
+    API --> Qdrant[("Qdrant<br/>(derived projection —<br/>own service, never embedded<br/>in the pulse-api image)")]
     API --> OS[("Object Storage<br/>(raw evidence)")]
     API --> Queue[("Job Queue<br/>(not yet selected)")]
     Worker --> PG
+    Worker --> Qdrant
     Worker --> OS
     Worker --> Haystack["Haystack Engine<br/>(models, tools, retrieval)"]
     Scheduler --> Queue
 ```
 
 Only `pulse-api` exists as a runnable deployment role today (this
-repository's `Dockerfile`/`docker-compose.yml`). `pulse-worker` and
+repository's `Dockerfile`/`docker-compose.yml`, which also runs PostgreSQL
+and Qdrant as separate local-development services). `pulse-worker` and
 `pulse-scheduler` are reserved roles (item 67-69) — introduced once there is
 a real asynchronous workload to run, not speculatively.
 

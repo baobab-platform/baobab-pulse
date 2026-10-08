@@ -1,8 +1,9 @@
 """Tenant-context and correlation-id propagation (item 48, 57, 77).
 
-Every request binds a :class:`TenantContext` for its duration — the
-structural enforcement ``tenancy.context.require_tenant_context`` depends
-on. A request with no resolvable tenant is not rejected here (some
+Legacy routes may bind a :class:`TenantContext` from the historical tenant
+header. Canonical capability routes never use that header as authority:
+``/evidence/search`` obtains its tenant exclusively from caller-bound
+Control Plane context validation in P-CAP-03. A request with no resolvable tenant is not rejected here (some
 resources, e.g. ``/healthz``, are legitimately tenant-free) — it simply
 never gets a bound context, and any handler downstream that needs one gets
 a :class:`~baobab_pulse.domain.shared.errors.TenantContextMissingError` if
@@ -30,9 +31,18 @@ class TenancyMiddleware(BaseHTTPMiddleware):
         correlation_id = request.headers.get(_CORRELATION_HEADER, str(uuid4()))
         request.state.correlation_id = correlation_id
 
-        tenant_id = request.headers.get(_TENANT_HEADER)
+        # P-CAP-03: the canonical evidence capability must not even transiently
+        # bind caller-selected tenant authority. Its application adapter binds
+        # the Control-Plane-validated tenant in a nested, request-local context.
+        canonical_context_bound = request.url.path in {
+            "/evidence/search",
+            "/research-missions/manage",
+        }
+        tenant_id = None if canonical_context_bound else request.headers.get(_TENANT_HEADER)
         context = bind_tenant_context(TenantContext(tenant_id=tenant_id)) if tenant_id else nullcontext()
         with context:
             response = await call_next(request)
-        response.headers[_CORRELATION_HEADER] = correlation_id
+        response.headers[_CORRELATION_HEADER] = str(
+            getattr(request.state, "correlation_id", correlation_id)
+        )
         return response

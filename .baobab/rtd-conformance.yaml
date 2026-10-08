@@ -1,0 +1,56 @@
+schema: baobab-rtd-conformance
+version: "1.0"
+programme: RTD-10
+repository:
+  id: baobab-pulse
+  role: INTELLIGENCE_CONSUMER
+  maturity: IMPLEMENTED_CONSUMER
+shared:
+  repository: baobab-platform/shared
+  commit: "f61de9c5141e432b32cc3b585aafa7d1b6727716"
+  required_contracts:
+    - contracts/authorization/v1/scope-registry.yaml
+    - contracts/identity/v1/workload-registry.yaml
+    - contracts/capability/v1/catalogue.yaml
+    - contracts/control-plane/v1/domain.schema.json
+    - contracts/control-plane/v1/platform-context.schema.json
+    - contracts/intelligence/v1/capabilities.yaml
+    - contracts/intelligence/v1/domain.schema.json
+    - contracts/cross-engine-reference/v1/domain.schema.json
+    - contracts/events/v1/envelope.schema.json
+    - contracts/identity/v1/workload-token-response.schema.json
+    - contracts/regulatory-document-exchange/v1/domain.schema.json
+    - contracts/regulatory-document-exchange/v1/events.schema.json
+    - contracts/trade-document/v2/domain.schema.json
+    - contracts/trade-document/v2/events.schema.json
+evidence:
+  adr_paths:
+    - docs/adr/ADR-PULSE-013 — Upstream Intelligence Projection, Cross-Engine Reference and Non-Enforcement Consumer Architecture.md
+    - docs/adr/ADR-PULSE-014 — Authenticated Context-Bound Evidence Search Capability.md
+    - docs/adr/ADR-PULSE-015 — Durable Context-Bound ResearchMission Capability.md
+    - docs/adr/ADR-PULSE-016 — ResearchMission Mutation Idempotency, Audit and Held Event Semantics.md
+    - docs/adr/ADR-PULSE-017 — Evidence-Backed PARTIAL Capability Provider Support.md
+    - docs/adr/ADR-PULSE-018 — Production Authority Adapters and IMPLEMENTED Capability Provider Readiness.md
+  source_paths:
+    - src/baobab_pulse/application/services/upstream_fact_projection_service.py
+    - src/baobab_pulse/application/intelligence_authority.py
+    - src/baobab_pulse/application/services/evidence_search_capability.py
+    - src/baobab_pulse/application/services/research_mission_manage_capability.py
+    - src/baobab_pulse/infrastructure/authentication/oidc_jwks.py
+    - src/baobab_pulse/infrastructure/control_plane/context_authority.py
+    - src/baobab_pulse/api/composition.py
+    - src/baobab_pulse/infrastructure/persistence/research_mission_mutation.py
+    - src/baobab_pulse/domain/projections/models.py
+  test_paths:
+    - tests/architecture/test_rtd09_boundaries.py
+    - tests/contract/test_rtd09_upstream_contracts.py
+    - tests/contract/test_evidence_search_capability_contract.py
+    - tests/contract/test_research_mission_capability_contract.py
+    - tests/api/test_evidence_search_api.py
+    - tests/api/test_research_mission_manage_api.py
+    - tests/infrastructure/test_p_cap_07_authority_adapters.py
+    - tests/integration/test_evidence_postgres_qdrant_roundtrip.py
+    - tests/integration/test_research_mission_postgres_roundtrip.py
+    - tests/integration/test_research_mission_mutation_governance.py
+    - tests/architecture/test_p_cap_07_provider_readiness.py
+    - tests/contract/test_capability_census_declaration.py

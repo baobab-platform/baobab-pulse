@@ -11,7 +11,9 @@ mutated in place.
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, model_validator
@@ -100,16 +102,104 @@ class Quantity(ValueObject):
 
 
 class Reference(ValueObject):
-    """A typed pointer to another canonical object, used instead of embedding
-    mutable copies of upstream intelligence (ADR-PULSE-002 §"Recommendation
-    isolation"). Carries the referenced object's type and id, and — for
-    versioned aggregates — the exact version referenced, since historical
-    references SHALL resolve to the version used at the time, not
-    automatically to the current latest version (AGG-PULSE-015)."""
+    """Pulse-local typed pointer.
+
+    Cross-engine wire identity uses :class:`CrossEngineObjectReference`
+    (ADR-SHARED-021 / RTD-05). This older value object remains valid for
+    references whose ownership is entirely inside Pulse.
+    """
 
     object_type: str
     object_id: str
     version: str | None = None
+
+
+class CrossEngineReferenceMode(StrEnum):
+    """ADR-SHARED-021 reference-resolution semantics."""
+
+    CURRENT = "CURRENT"
+    IDENTITY_PINNED = "IDENTITY_PINNED"
+    VERSION_PINNED = "VERSION_PINNED"
+
+
+class CrossEngineReferenceScope(StrEnum):
+    PLATFORM = "platform"
+    TENANT = "tenant"
+
+
+class CrossEngineVersionKind(StrEnum):
+    VERSION = "VERSION"
+    REVISION = "REVISION"
+    SEQUENCE = "SEQUENCE"
+    ETAG = "ETAG"
+    CONTENT_HASH = "CONTENT_HASH"
+    OTHER = "OTHER"
+
+
+class CrossEngineObjectVersion(ValueObject):
+    """Opaque owner-defined historical version/revision."""
+
+    kind: CrossEngineVersionKind
+    value: str
+
+    @model_validator(mode="after")
+    def _value_shape(self) -> CrossEngineObjectVersion:
+        if not (1 <= len(self.value) <= 256):
+            raise ValueError("cross-engine object version value must be 1..256 characters")
+        return self
+
+
+_ENGINE_ID = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+_OBJECT_TYPE = re.compile(r"^[A-Z][A-Z0-9_]{1,95}$")
+_OBJECT_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
+_TENANT_ID = re.compile(r"^tn_[a-z0-9]+$")
+
+
+class CrossEngineObjectReference(ValueObject):
+    """Portable owner-preserving reference from ADR-SHARED-021.
+
+    The reference carries identity and historical pinning only. It never
+    embeds the foreign aggregate and never grants access to it.
+    """
+
+    owner_engine_id: str
+    object_type: str
+    object_id: str
+    reference_mode: CrossEngineReferenceMode
+    scope: CrossEngineReferenceScope
+    tenant_id: str | None = None
+    object_version: CrossEngineObjectVersion | None = None
+
+    @model_validator(mode="after")
+    def _shared_contract_invariants(self) -> CrossEngineObjectReference:
+        if not (3 <= len(self.owner_engine_id) <= 63) or not _ENGINE_ID.fullmatch(self.owner_engine_id):
+            raise ValueError("owner_engine_id must satisfy the canonical Shared engineId grammar")
+        if not _OBJECT_TYPE.fullmatch(self.object_type):
+            raise ValueError("object_type must use the canonical uppercase semantic-code grammar")
+        if not (1 <= len(self.object_id) <= 160) or not _OBJECT_ID.fullmatch(self.object_id):
+            raise ValueError("object_id does not satisfy the Shared cross-engine reference grammar")
+
+        if self.scope == CrossEngineReferenceScope.TENANT:
+            if self.tenant_id is None or not _TENANT_ID.fullmatch(self.tenant_id):
+                raise ValueError("tenant-scoped references require a canonical tenant_id")
+        elif self.tenant_id is not None:
+            raise ValueError("platform-scoped references must not carry tenant_id")
+
+        if self.reference_mode == CrossEngineReferenceMode.VERSION_PINNED:
+            if self.object_version is None:
+                raise ValueError("VERSION_PINNED references require object_version")
+        elif self.object_version is not None:
+            raise ValueError("CURRENT/IDENTITY_PINNED references must not carry object_version")
+
+        return self
+
+
+class CrossEngineReferenceObservation(ValueObject):
+    """Consumer-side observation metadata kept outside reference identity."""
+
+    reference: CrossEngineObjectReference
+    observed_at: datetime
+    resolved_at: datetime | None = None
 
 
 class QualityProfile(ValueObject):

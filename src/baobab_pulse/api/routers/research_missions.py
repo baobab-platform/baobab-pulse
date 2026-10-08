@@ -1,51 +1,56 @@
-"""``/research-missions`` — a minimal slice of the API boundary (item 60).
-
-Not a complete resource (no listing, filtering, or pipeline-run endpoints
-yet) — enough to prove the API -> application -> domain path end-to-end
-through the headless boundary, per this scaffold's verification purpose.
-"""
+"""Canonical HTTP adapter for intelligence.research-mission.manage."""
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Annotated
+from uuid import UUID
 
-from baobab_pulse.api.dependencies import get_research_mission_repository
+from fastapi import APIRouter, Depends
+
+from baobab_pulse.api.dependencies import (
+    AuthenticatedCapabilityRequest,
+    CapabilityRequestMetadata,
+    get_capability_request_metadata,
+    require_authenticated_capability_request,
+    require_context_id,
+)
 from baobab_pulse.contracts.api.research_missions import (
-    CreateResearchMissionRequest,
+    ResearchMissionManageRequest,
     ResearchMissionResponse,
 )
-from baobab_pulse.domain.research import ResearchMission
-from baobab_pulse.domain.shared.identifiers import new_id
-from baobab_pulse.infrastructure.persistence.in_memory_repositories import InMemoryRepository
+from baobab_pulse.domain.shared.errors import CapabilityRuntimeUnavailableError
 
 router = APIRouter(prefix="/research-missions", tags=["research-missions"])
 
 
-@router.post("", status_code=201)
-async def create_research_mission(
-    request: CreateResearchMissionRequest,
-    repository: InMemoryRepository[ResearchMission] = Depends(get_research_mission_repository),
+@router.post(
+    "/manage",
+    operation_id="manageIntelligenceResearchMission",
+    response_model=ResearchMissionResponse,
+)
+async def manage_research_mission(
+    request: ResearchMissionManageRequest,
+    auth: Annotated[
+        AuthenticatedCapabilityRequest,
+        Depends(require_authenticated_capability_request),
+    ],
+    context_id: Annotated[UUID, Depends(require_context_id)],
+    metadata: Annotated[
+        CapabilityRequestMetadata,
+        Depends(get_capability_request_metadata),
+    ],
 ) -> ResearchMissionResponse:
-    mission = ResearchMission(
-        id=new_id("rms"),
-        title=request.title,
-        research_question=request.research_question,
-        tenant_scope=request.tenant_scope,
-        tenant_context=request.to_tenant_context(),
-        classification=request.classification,
-        confidence_requirement=request.confidence_requirement,
+    service = auth.runtime.research_missions
+    if service is None:
+        raise CapabilityRuntimeUnavailableError(
+            "ResearchMission capability runtime is not configured"
+        )
+
+    mission = await service.manage(
+        context_id=context_id,
+        caller=auth.caller,
+        request=request,
+        correlation_id=metadata.correlation_id,
+        idempotency_key=metadata.idempotency_key,
     )
-    mission.check_tenant_context()
-    await repository.add(mission)
-    return ResearchMissionResponse.from_domain(mission)
-
-
-@router.get("/{mission_id}")
-async def get_research_mission(
-    mission_id: str,
-    repository: InMemoryRepository[ResearchMission] = Depends(get_research_mission_repository),
-) -> ResearchMissionResponse:
-    mission = await repository.get(mission_id)
-    if mission is None:
-        raise HTTPException(status_code=404, detail="research mission not found")
     return ResearchMissionResponse.from_domain(mission)

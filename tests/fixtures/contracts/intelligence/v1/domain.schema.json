@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/intelligence/v1/domain.schema.json",
+  "title": "Baobab Intelligence capability contracts v1",
+  "description": "Provider-neutral contracts for the first canonical intelligence capability tranche. These schemas define business semantics only; tenant authority is established by caller-bound Control Plane context, while operation and classification authority are established by the authenticated Pulse resource-server token. None are caller-supplied request fields.",
+  "$defs": {
+    "classification": {
+      "type": "string",
+      "enum": ["PUBLIC", "BAOBAB_INTERNAL", "TENANT", "CONFIDENTIAL", "RESTRICTED"]
+    },
+    "tenantScope": {
+      "type": "string",
+      "enum": ["GLOBAL", "PLATFORM", "TENANT", "CONTEXT", "PRIVATE"]
+    },
+    "confidenceBand": {
+      "type": "string",
+      "enum": ["UNKNOWN", "VERY_LOW", "LOW", "MODERATE", "HIGH", "VERY_HIGH"]
+    },
+    "researchMissionStatus": {
+      "type": "string",
+      "enum": [
+        "PROPOSED",
+        "SCOPED",
+        "SOURCE_PLANNED",
+        "ACQUIRING",
+        "ANALYSING",
+        "REVIEW",
+        "PUBLISHED",
+        "SUSPENDED",
+        "CANCELLED",
+        "INSUFFICIENT_EVIDENCE",
+        "SUPERSEDED"
+      ]
+    },
+    "researchMissionCreateRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "operation",
+        "title",
+        "research_question",
+        "tenant_scope",
+        "classification",
+        "confidence_requirement"
+      ],
+      "properties": {
+        "operation": { "const": "CREATE" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "research_question": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "tenant_scope": { "$ref": "#/$defs/tenantScope" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "confidence_requirement": { "$ref": "#/$defs/confidenceBand" }
+      },
+      "description": "Create a governed research mission. Trusted tenant/context authority is derived from authenticated invocation context; the request deliberately carries no tenant_id."
+    },
+    "researchMissionGetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operation", "research_mission_id"],
+      "properties": {
+        "operation": { "const": "GET" },
+        "research_mission_id": { "type": "string", "minLength": 1, "maxLength": 128 }
+      },
+      "description": "Retrieve one existing research mission within the caller-bound authorised scope."
+    },
+    "researchMissionManageRequest": {
+      "oneOf": [
+        { "$ref": "#/$defs/researchMissionCreateRequest" },
+        { "$ref": "#/$defs/researchMissionGetRequest" }
+      ]
+    },
+    "researchMissionResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "research_question",
+        "status",
+        "tenant_scope",
+        "classification",
+        "confidence_requirement"
+      ],
+      "properties": {
+        "id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "title": { "type": "string", "minLength": 1, "maxLength": 300 },
+        "research_question": { "type": "string", "minLength": 1, "maxLength": 4000 },
+        "status": { "$ref": "#/$defs/researchMissionStatus" },
+        "tenant_scope": { "$ref": "#/$defs/tenantScope" },
+        "classification": { "$ref": "#/$defs/classification" },
+        "confidence_requirement": { "$ref": "#/$defs/confidenceBand" }
+      }
+    },
+    "evidenceSearchRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["query_text"],
+      "properties": {
+        "query_text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+        "evidence_set_id": {
+          "type": ["string", "null"],
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Optional bounded search scope. It is an intelligence object selector, not tenant authority."
+        },
+        "top_k": { "type": "integer", "minimum": 1, "maximum": 100, "default": 10 }
+      },
+      "description": "Search authorised intelligence evidence semantically. Tenant scope is obtained from caller-bound Control Plane context; operation authority and data-classification clearance are obtained from the authenticated Pulse resource-server token. None are caller-supplied request fields."
+    },
+    "evidenceCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["canonical_object_id", "evidence_set_id", "score", "is_stale"],
+      "properties": {
+        "canonical_object_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "evidence_set_id": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "score": {
+          "type": "number",
+          "description": "Retrieval similarity/relevance score only. It is not Pulse confidence, evidentiary strength or regulatory sufficiency."
+        },
+        "is_stale": {
+          "type": "boolean",
+          "description": "Whether the retrieval projection is older than the current canonical evidence version."
+        }
+      }
+    },
+    "evidenceSearchResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidates"],
+      "properties": {
+        "candidates": {
+          "type": "array",
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/evidenceCandidate" }
+        }
+      }
+    }
+  }
+}

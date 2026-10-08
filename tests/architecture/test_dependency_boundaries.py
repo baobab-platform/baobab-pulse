@@ -14,6 +14,7 @@ from pathlib import Path
 SRC_ROOT = Path(__file__).resolve().parents[2] / "src" / "baobab_pulse"
 
 _HAYSTACK_PREFIXES = ("haystack",)
+_QDRANT_PREFIXES = ("qdrant_client", "haystack_integrations")
 _HTTP_FRAMEWORK_PREFIXES = ("fastapi", "starlette", "uvicorn")
 _DATABASE_PREFIXES = ("asyncpg", "sqlalchemy", "psycopg", "psycopg2")
 _CLOUD_SDK_PREFIXES = ("boto3", "botocore", "google.cloud", "azure")
@@ -92,4 +93,38 @@ def test_only_the_haystack_infrastructure_package_imports_haystack() -> None:
     ]
     _assert_no_forbidden_imports(
         everything_except_haystack_infra, _HAYSTACK_PREFIXES, "codebase (outside infrastructure.haystack) -> Haystack"
+    )
+
+
+# -- Qdrant (Qdrant refactor item 14, 34, 128): the same anti-corruption
+# boundary applies to qdrant_client/haystack_integrations as already applies
+# to bare haystack — a qdrant_client.PointStruct/Filter/ScoredPoint or a
+# haystack_integrations Qdrant type SHALL never cross out of
+# infrastructure.haystack.document_stores.qdrant_projection_store. Ports
+# (VectorProjectionPort/SemanticRetrievalPort) and canonical contracts only
+# ever see plain Pulse types (ProjectionRecord/SemanticCandidate/...).
+
+
+def test_domain_does_not_import_qdrant() -> None:
+    _assert_no_forbidden_imports(_files_under("domain"), _QDRANT_PREFIXES, "domain -> Qdrant")
+
+
+def test_application_does_not_import_qdrant_directly() -> None:
+    # Application code depends on VectorProjectionPort/SemanticRetrievalPort
+    # — the *port*, never the concrete Qdrant implementation behind it.
+    _assert_no_forbidden_imports(_files_under("application"), _QDRANT_PREFIXES, "application -> Qdrant")
+
+
+def test_canonical_contracts_do_not_expose_qdrant_types() -> None:
+    _assert_no_forbidden_imports(_files_under("contracts"), _QDRANT_PREFIXES, "contracts -> Qdrant")
+
+
+def test_only_the_haystack_infrastructure_package_imports_qdrant() -> None:
+    everything_except_haystack_infra = [
+        f
+        for f in SRC_ROOT.rglob("*.py")
+        if "infrastructure/haystack" not in f.as_posix() and "infrastructure\\haystack" not in f.as_posix()
+    ]
+    _assert_no_forbidden_imports(
+        everything_except_haystack_infra, _QDRANT_PREFIXES, "codebase (outside infrastructure.haystack) -> Qdrant"
     )

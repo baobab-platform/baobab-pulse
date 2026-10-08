@@ -1,4 +1,4 @@
-# Baobab Pulse Intelligence Engine  
+# ADR-Pulse-X01-Baobab Pulse Intelligence Engine  
 ## Parent Architecture Specification
 
 **Document ID:** `ARCH-PULSE-001`  

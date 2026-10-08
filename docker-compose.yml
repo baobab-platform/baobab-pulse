@@ -1,8 +1,10 @@
-# Local development topology only (item 115-116): Pulse API + PostgreSQL.
-# Production orchestration belongs to nabhold/infrastructure — this file
-# does not duplicate that, it only makes `docker compose up` a viable local
-# loop for a contributor who wants to exercise the API against a real
-# PostgreSQL instead of the in-memory repositories the test suite uses.
+# Local development topology only (item 115-116): Pulse API + PostgreSQL +
+# Qdrant. Production orchestration belongs to baobab-platform/infrastructure — this
+# file does not duplicate that, it only makes `docker compose up` a viable
+# local loop for a contributor who wants to exercise the API against real
+# PostgreSQL + Qdrant instead of the in-memory/embedded substitutes the test
+# suite uses. Qdrant runs as its own service (item 70: never embedded in
+# the Pulse application image).
 
 services:
   postgres:
@@ -22,6 +24,20 @@ services:
       timeout: 5s
       retries: 10
 
+  qdrant:
+    image: qdrant/qdrant:v1.19.1
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - pulse-qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/6333' || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   pulse-api:
     build:
       context: .
@@ -30,12 +46,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      qdrant:
+        condition: service_healthy
     environment:
       PULSE_DATABASE_URL: postgresql://pulse:pulse@postgres:5432/baobab_pulse
       PULSE_ENVIRONMENT: local
       PULSE_LOG_LEVEL: INFO
+      PULSE_QDRANT_URL: http://qdrant:6333
     ports:
       - "8000:8000"
 
 volumes:
   pulse-postgres-data:
+  pulse-qdrant-data:

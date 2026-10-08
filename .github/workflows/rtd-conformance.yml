@@ -1,0 +1,16 @@
+name: RTD-10 Cross-Repository Conformance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rtd-conformance:
+    uses: baobab-platform/shared/.github/workflows/rtd-cross-repository-conformance.yml@f61de9c5141e432b32cc3b585aafa7d1b6727716
+    secrets:
+      SHARED_READ_TOKEN: ${{ secrets.SHARED_READ_TOKEN }}

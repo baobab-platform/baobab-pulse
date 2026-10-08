@@ -120,6 +120,20 @@ class EvidenceDirection(StrEnum):
     CONTEXTUAL = "CONTEXTUAL"
 
 
+class HistoricalRetrievalStrategy(StrEnum):
+    """Qdrant refactor item 64: reserved so a future retrieval strategy can
+    be added without breaking canonical data. Only ``CURRENT_ONLY`` is
+    implemented today (``application.services.evidence_retrieval_service``
+    always searches and hydrates the latest canonical version); the other
+    members exist so a caller-facing parameter can be introduced later
+    without a breaking rename."""
+
+    CURRENT_ONLY = "CURRENT_ONLY"
+    CURRENT_AND_RECENT = "CURRENT_AND_RECENT"
+    ALL_REVISIONS = "ALL_REVISIONS"
+    SNAPSHOT_SPECIFIC = "SNAPSHOT_SPECIFIC"
+
+
 class AutomationAuthorityLevel(StrEnum):
     """ADR-PULSE-001, "Automation Authority Levels". A capability may never
     jump between levels without an explicit policy (ADR-PULSE-001)."""

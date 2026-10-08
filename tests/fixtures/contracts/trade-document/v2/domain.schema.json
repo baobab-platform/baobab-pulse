@@ -1,0 +1,823 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/trade-document/v2/domain.schema.json",
+  "title": "Baobab TradeDocument v2 domain contract",
+  "description": "RTD-04 reconciliation of the pre-activation TradeDocument contract with ADR-SHARED-019 and baobab-trade-docs ADR-TDOC-0001/0002. Separates document identity, immutable versions, content artifacts, lifecycle, verification and relationships.",
+  "$defs": {
+    "tradeDocumentId": {
+      "type": "string",
+      "pattern": "^tdoc_[a-z0-9]+$",
+      "minLength": 8,
+      "maxLength": 63,
+      "description": "Opaque durable Trade Docs-minted TradeDocument domain identifier. It is not a Control Plane CanonicalEntity ID and encodes no document type, jurisdiction or provider meaning."
+    },
+    "documentVersionId": {
+      "type": "string",
+      "pattern": "^tdocv_[a-z0-9]+$",
+      "minLength": 9,
+      "maxLength": 63,
+      "description": "Opaque durable identifier for one immutable semantic version of a TradeDocument."
+    },
+    "contentArtifactId": {
+      "type": "string",
+      "pattern": "^tdoca_[a-z0-9]+$",
+      "minLength": 9,
+      "maxLength": 63
+    },
+    "documentRelationshipId": {
+      "type": "string",
+      "pattern": "^tdocr_[a-z0-9]+$",
+      "minLength": 9,
+      "maxLength": 63
+    },
+    "documentTypeCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{1,63}$",
+      "description": "Governed extensible semantic document-type code. It is deliberately not a closed enum and does not itself encode jurisdiction-specific legal requirements."
+    },
+    "documentFamily": {
+      "type": "string",
+      "enum": [
+        "TRADE",
+        "TRANSPORT",
+        "CUSTOMS",
+        "REGULATORY",
+        "PROCUREMENT",
+        "FINANCIAL",
+        "INSURANCE",
+        "QUALITY",
+        "WAREHOUSE",
+        "PAYMENT",
+        "CONTRACT",
+        "IDENTITY_SUPPORTING",
+        "OTHER"
+      ],
+      "description": "High-level document family. Family does not determine legal authority."
+    },
+    "documentLifecycleState": {
+      "type": "string",
+      "enum": [
+        "DRAFT",
+        "ISSUED",
+        "SUPERSEDED",
+        "VOIDED",
+        "WITHDRAWN",
+        "ARCHIVED"
+      ],
+      "description": "Intrinsic TradeDocument lifecycle only. Verification, temporal validity and authority submission state are separate axes."
+    },
+    "verificationState": {
+      "type": "string",
+      "enum": [
+        "UNVERIFIED",
+        "PENDING",
+        "VERIFIED",
+        "FAILED",
+        "DISPUTED",
+        "UNKNOWN"
+      ],
+      "description": "Document/version verification projection. Verification does not imply authenticity, legal validity or regulatory sufficiency."
+    },
+    "temporalValidityState": {
+      "type": "string",
+      "enum": [
+        "NOT_YET_EFFECTIVE",
+        "CURRENTLY_VALID",
+        "EXPIRED",
+        "REVOKED",
+        "UNKNOWN"
+      ],
+      "description": "Issuer/authority-relative temporal validity projection, distinct from document lifecycle."
+    },
+    "mediumClassification": {
+      "type": "string",
+      "enum": [
+        "NATIVE_DIGITAL",
+        "DIGITISED_PAPER",
+        "PAPER_REFERENCE",
+        "HYBRID"
+      ],
+      "description": "Medium classification for a document version. A scan of paper is not automatically a native electronic record."
+    },
+    "artifactRole": {
+      "type": "string",
+      "enum": [
+        "CANONICAL_STRUCTURED_CONTENT",
+        "SOURCE_ORIGINAL",
+        "HUMAN_RENDERING",
+        "AUTHORITY_NATIVE_MESSAGE",
+        "SIGNED_ENVELOPE",
+        "SCANNED_COPY",
+        "DERIVED_EXTRACTION",
+        "ATTACHMENT_PART",
+        "OTHER"
+      ]
+    },
+    "relationshipType": {
+      "type": "string",
+      "enum": [
+        "SUPERSEDES",
+        "SUPERSEDED_BY",
+        "AMENDS",
+        "AMENDED_BY",
+        "CORRECTS",
+        "CORRECTED_BY",
+        "REPLACES",
+        "REPLACED_BY",
+        "CANCELS",
+        "CANCELLED_BY",
+        "SUPPORTS",
+        "SUPPORTED_BY",
+        "EVIDENCES",
+        "EVIDENCED_BY",
+        "REFERENCES",
+        "REFERENCED_BY",
+        "DERIVED_FROM",
+        "SOURCE_FOR",
+        "GENERATED_FROM",
+        "GENERATES",
+        "SUBMITTED_WITH",
+        "RESPONDS_TO",
+        "DUPLICATES"
+      ],
+      "description": "Document-to-document relationship semantics. Cross-engine requirement satisfaction is intentionally excluded pending RTD-05/RTD-06."
+    },
+    "documentIdentifier": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "value",
+        "scheme"
+      ],
+      "properties": {
+        "value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "scheme": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "issuer_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "jurisdiction_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "scope": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "issued_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "valid_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "valid_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "external_system": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        }
+      }
+    },
+    "issuerClaim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "party_reference",
+        "issuer_role"
+      ],
+      "properties": {
+        "party_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Claimed issuer reference. Where resolvable it should identify the canonical organisation/authority without creating a duplicate local master."
+        },
+        "issuer_role": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+        },
+        "source_identity": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "authority_context": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        }
+      }
+    },
+    "subjectAssociation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "subject_context",
+        "subject_type",
+        "subject_reference",
+        "role"
+      ],
+      "properties": {
+        "subject_context": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9-]{1,63}$",
+          "description": "Owning business context of the associated subject. This is not the RTD-05 cross-engine canonical-reference contract."
+        },
+        "subject_type": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+        },
+        "subject_reference": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "role": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+        },
+        "effective_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_kind",
+        "recorded_at"
+      ],
+      "properties": {
+        "source_kind": {
+          "type": "string",
+          "enum": [
+            "EXTERNAL_INGESTED",
+            "BAOBAB_GENERATED",
+            "MIGRATED",
+            "DERIVED"
+          ]
+        },
+        "source_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "supplied_by_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "source_system": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "recorded_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "contentArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "artifact_id",
+        "document_version_id",
+        "artifact_role",
+        "media_type",
+        "storage_reference",
+        "digest_algorithm",
+        "digest_value"
+      ],
+      "properties": {
+        "artifact_id": {
+          "$ref": "#/$defs/contentArtifactId"
+        },
+        "document_version_id": {
+          "$ref": "#/$defs/documentVersionId"
+        },
+        "artifact_role": {
+          "$ref": "#/$defs/artifactRole"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "syntax": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "schema_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "semantic_context_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "language": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 35
+        },
+        "character_encoding": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "storage_reference": {
+          "type": "string",
+          "format": "uri",
+          "description": "Artifact storage location. Storage belongs to the artifact, never the mutable TradeDocument root."
+        },
+        "byte_length": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "digest_algorithm": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64
+        },
+        "digest_value": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 512
+        },
+        "generated_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "generated_by": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "renderer_version": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "source_artifact_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/contentArtifactId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "documentVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_version_id",
+        "trade_document_id",
+        "version_sequence",
+        "lifecycle_snapshot",
+        "medium_classification",
+        "content_artifacts",
+        "created_at",
+        "created_by",
+        "provenance"
+      ],
+      "properties": {
+        "document_version_id": {
+          "$ref": "#/$defs/documentVersionId"
+        },
+        "trade_document_id": {
+          "$ref": "#/$defs/tradeDocumentId"
+        },
+        "version_sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "external_revision_label": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 128
+        },
+        "lifecycle_snapshot": {
+          "$ref": "#/$defs/documentLifecycleState"
+        },
+        "medium_classification": {
+          "$ref": "#/$defs/mediumClassification"
+        },
+        "semantic_payload_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "source_snapshot_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "content_artifacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/contentArtifact"
+          },
+          "uniqueItems": true
+        },
+        "signature_references": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "uniqueItems": true
+        },
+        "issued_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "effective_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "change_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "supersedes_version_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/documentVersionId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "provenance": {
+          "$ref": "#/$defs/provenance"
+        }
+      }
+    },
+    "documentRelationship": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationship_id",
+        "source_document_id",
+        "target_document_id",
+        "relationship_type",
+        "created_at",
+        "created_by"
+      ],
+      "properties": {
+        "relationship_id": {
+          "$ref": "#/$defs/documentRelationshipId"
+        },
+        "source_document_id": {
+          "$ref": "#/$defs/tradeDocumentId"
+        },
+        "target_document_id": {
+          "$ref": "#/$defs/tradeDocumentId"
+        },
+        "relationship_type": {
+          "$ref": "#/$defs/relationshipType"
+        },
+        "source_version_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/documentVersionId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "target_version_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/documentVersionId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "created_by": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "provenance": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/provenance"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "tradeDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "tenant_id",
+        "document_type",
+        "document_family",
+        "issuer_claim",
+        "lifecycle_state",
+        "business_identifiers",
+        "subject_associations",
+        "aggregate_version",
+        "created_at",
+        "updated_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "#/$defs/tradeDocumentId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "document_type": {
+          "$ref": "#/$defs/documentTypeCode"
+        },
+        "document_family": {
+          "$ref": "#/$defs/documentFamily"
+        },
+        "issuer_claim": {
+          "$ref": "#/$defs/issuerClaim"
+        },
+        "lifecycle_state": {
+          "$ref": "#/$defs/documentLifecycleState"
+        },
+        "current_version_id": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/documentVersionId"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "business_identifiers": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/documentIdentifier"
+          },
+          "uniqueItems": true
+        },
+        "subject_associations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/subjectAssociation"
+          },
+          "uniqueItems": true
+        },
+        "aggregate_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "lifecycle_state": {
+                "const": "ISSUED"
+              }
+            },
+            "required": [
+              "lifecycle_state"
+            ]
+          },
+          "then": {
+            "required": [
+              "current_version_id"
+            ],
+            "properties": {
+              "current_version_id": {
+                "$ref": "#/$defs/documentVersionId"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "documentVerificationProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "verification_state",
+        "observed_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "#/$defs/documentVersionId"
+        },
+        "verification_state": {
+          "$ref": "#/$defs/verificationState"
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z][A-Z0-9_]{2,127}$"
+        },
+        "verifier_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Current documentary verification projection for one immutable DocumentVersion. It is not part of the version's semantic content and does not imply regulatory sufficiency."
+    },
+    "documentTemporalValidityProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "temporal_validity_state",
+        "observed_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "#/$defs/documentVersionId"
+        },
+        "temporal_validity_state": {
+          "$ref": "#/$defs/temporalValidityState"
+        },
+        "authority_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "basis_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Current issuer/authority-relative temporal-validity projection for one immutable DocumentVersion. Expiry or revocation changes this projection without mutating historical content."
+    }
+  }
+}

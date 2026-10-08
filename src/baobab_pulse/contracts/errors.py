@@ -1,6 +1,6 @@
 """RFC 9457 problem+json error contract.
 
-Field-for-field mirror of ``nabhold/shared``'s
+Field-for-field mirror of ``baobab-platform/shared``'s
 ``contracts/errors/v1/problem-details.schema.json`` (vendored at
 ``tests/fixtures/contracts/problem-details.schema.json``). This is the only
 shape Pulse's public API returns for an error response (item 120: Haystack

@@ -18,6 +18,6 @@ from baobab_pulse.domain.shared.base import DomainEvent
 class EventPublisher(Protocol):
     async def publish(self, event: DomainEvent, *, event_type: str) -> None:
         """Append ``event`` to the outbox under the given wire event type
-        (e.g. ``"com.nabhold.pulse.insight.published.v1"`` — see
+        (e.g. ``"com.baobab-platform.pulse.insight.published.v1"`` — see
         ``baobab_pulse.contracts.events`` for the envelope this becomes)."""
         ...

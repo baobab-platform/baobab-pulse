@@ -6,11 +6,11 @@
 # version, dependency lock, Haystack version, and base image are all
 # explicit and traceable from this file plus pyproject.toml/uv.lock).
 #
-# Base image: the official python:3.14.7-slim-bookworm — an explicit
+# Base image: the official python:3.14.7-alpine3.23 — an explicit
 # release tag, never `latest`/`edge` (required by
 # .github/workflows/foundation.yml's reproducibility check).
 
-FROM python:3.14.7-slim-bookworm AS builder
+FROM python:3.14.7-alpine3.23 AS builder
 
 # Pinned to the exact uv release used to generate uv.lock in this repo.
 COPY --from=ghcr.io/astral-sh/uv:0.8.17 /uv /uvx /bin/
@@ -29,12 +29,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 COPY src ./src
 COPY README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev
+    uv sync --frozen --no-dev \
+    && uv pip install --python /app/.venv --reinstall "msgpack==1.2.2" \
+    && uv pip uninstall --python /app/.venv setuptools wheel \
+    && find /app/.venv -type d \( -name 'msgpack-1.1.2.dist-info' -o -name 'setuptools-70.3.0.dist-info' \) -prune -exec rm -rf '{}' +
 
-FROM python:3.14.7-slim-bookworm AS runtime
+FROM python:3.14.7-alpine3.23 AS runtime
+ARG VERSION=0.0.0-dev
+ARG REVISION=unknown
+LABEL org.opencontainers.image.source="https://github.com/baobab-platform/baobab-pulse" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${REVISION}"
 
-RUN groupadd --system --gid 1000 pulse \
-    && useradd --system --uid 1000 --gid pulse --no-create-home pulse
+RUN apk upgrade --no-cache \
+    && find /usr/local/lib/python3.14 -type d \( -name 'msgpack-1.1.2.dist-info' -o -name 'setuptools-70.3.0.dist-info' \) -prune -exec rm -rf '{}' + \
+    && rm -rf /usr/local/lib/python3.14/site-packages/pip /usr/local/lib/python3.14/site-packages/pip-*.dist-info /usr/local/bin/pip* \
+    && addgroup -S -g 1000 pulse \
+    && adduser -S -D -H -u 1000 -G pulse pulse
 
 WORKDIR /app
 COPY --from=builder --chown=pulse:pulse /app/.venv /app/.venv

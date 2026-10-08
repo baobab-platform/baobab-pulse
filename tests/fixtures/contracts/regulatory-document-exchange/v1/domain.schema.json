@@ -1,0 +1,773 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/regulatory-document-exchange/v1/domain.schema.json",
+  "title": "Baobab Regulations ↔ Trade Docs exchange v1",
+  "description": "RTD-06 cross-engine projections and command/result shapes for documentary requirements and evidence assessment. Canonical ownership remains with baobab-regulations and baobab-trade-docs respectively.",
+  "$defs": {
+    "requirementKind": {
+      "type": "string",
+      "enum": [
+        "DOCUMENT",
+        "PERMIT",
+        "EVIDENCE"
+      ],
+      "description": "Regulations-owned requirement class exposed to Trade Docs. This classification does not transfer requirement authority."
+    },
+    "requirementCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+      "description": "Stable Regulations-owned semantic code, e.g. PHYTOSANITARY_CERTIFICATE_REQUIRED."
+    },
+    "purposeCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+      "description": "Regulations-owned purpose code describing why documentary proof is required, e.g. SPS, ORIGIN, CUSTOMS_DECLARATION."
+    },
+    "effectCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,127}$",
+      "description": "Regulations-owned machine-readable consequence code when a requirement is not satisfied. It is advisory to Trade Docs and does not authorise operational enforcement."
+    },
+    "reasonCode": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9_]{2,127}$"
+    },
+    "assessmentReason": {
+      "type": "string",
+      "enum": [
+        "INITIAL_EVIDENCE",
+        "EVIDENCE_CHANGED",
+        "VERIFICATION_CHANGED",
+        "VALIDITY_CHANGED",
+        "MANUAL_REVIEW",
+        "REGULATORY_REASSESSMENT"
+      ]
+    },
+    "satisfactionOutcome": {
+      "type": "string",
+      "enum": [
+        "SATISFIED",
+        "UNSATISFIED",
+        "INDETERMINATE",
+        "NOT_APPLICABLE",
+        "REVIEW_REQUIRED"
+      ]
+    },
+    "regulatoryDecisionReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/pinnedCrossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-regulations"
+            },
+            "object_type": {
+              "const": "REGULATORY_DECISION"
+            }
+          }
+        }
+      ]
+    },
+    "documentRequirementReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/pinnedCrossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-regulations"
+            },
+            "object_type": {
+              "const": "DOCUMENT_REQUIREMENT"
+            }
+          }
+        }
+      ]
+    },
+    "permitRequirementReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/pinnedCrossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-regulations"
+            },
+            "object_type": {
+              "const": "PERMIT_REQUIREMENT"
+            }
+          }
+        }
+      ]
+    },
+    "evidenceRequirementReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/pinnedCrossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-regulations"
+            },
+            "object_type": {
+              "const": "EVIDENCE_REQUIREMENT"
+            }
+          }
+        }
+      ]
+    },
+    "regulatoryRequirementReference": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/documentRequirementReference"
+        },
+        {
+          "$ref": "#/$defs/permitRequirementReference"
+        },
+        {
+          "$ref": "#/$defs/evidenceRequirementReference"
+        }
+      ]
+    },
+    "regulatoryEvidenceAssessmentReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/pinnedCrossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-regulations"
+            },
+            "object_type": {
+              "const": "REGULATORY_EVIDENCE_ASSESSMENT"
+            }
+          }
+        }
+      ]
+    },
+    "documentVersionReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/crossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-trade-docs"
+            },
+            "object_type": {
+              "const": "DOCUMENT_VERSION"
+            },
+            "reference_mode": {
+              "const": "IDENTITY_PINNED"
+            }
+          }
+        }
+      ]
+    },
+    "contentArtifactReference": {
+      "allOf": [
+        {
+          "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/crossEngineObjectReference"
+        },
+        {
+          "properties": {
+            "owner_engine_id": {
+              "const": "baobab-trade-docs"
+            },
+            "object_type": {
+              "const": "CONTENT_ARTIFACT"
+            },
+            "reference_mode": {
+              "const": "IDENTITY_PINNED"
+            }
+          }
+        }
+      ]
+    },
+    "regulatoryDocumentRequirementProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement_reference",
+        "regulatory_decision_reference",
+        "requirement_kind",
+        "requirement_code",
+        "purpose_code",
+        "acceptable_document_types",
+        "required_issuer_roles",
+        "required_data_elements",
+        "unsatisfied_effect_code",
+        "effective_from",
+        "determined_at"
+      ],
+      "properties": {
+        "requirement_reference": {
+          "$ref": "#/$defs/regulatoryRequirementReference"
+        },
+        "regulatory_decision_reference": {
+          "$ref": "#/$defs/regulatoryDecisionReference"
+        },
+        "requirement_kind": {
+          "$ref": "#/$defs/requirementKind"
+        },
+        "requirement_code": {
+          "$ref": "#/$defs/requirementCode"
+        },
+        "purpose_code": {
+          "$ref": "#/$defs/purposeCode"
+        },
+        "acceptable_document_types": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": {
+            "$ref": "../../trade-document/v2/domain.schema.json#/$defs/documentTypeCode"
+          }
+        },
+        "required_issuer_roles": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 32,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{1,63}$"
+          }
+        },
+        "required_data_elements": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 128,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_.-]{1,127}$"
+          }
+        },
+        "unsatisfied_effect_code": {
+          "$ref": "#/$defs/effectCode"
+        },
+        "effective_from": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "determined_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "requirement_kind": {
+                "const": "DOCUMENT"
+              }
+            },
+            "required": [
+              "requirement_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "requirement_reference": {
+                "$ref": "#/$defs/documentRequirementReference"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "requirement_kind": {
+                "const": "PERMIT"
+              }
+            },
+            "required": [
+              "requirement_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "requirement_reference": {
+                "$ref": "#/$defs/permitRequirementReference"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "requirement_kind": {
+                "const": "EVIDENCE"
+              }
+            },
+            "required": [
+              "requirement_kind"
+            ]
+          },
+          "then": {
+            "properties": {
+              "requirement_reference": {
+                "$ref": "#/$defs/evidenceRequirementReference"
+              }
+            }
+          }
+        }
+      ],
+      "description": "Executable read projection of a Regulations-owned documentary requirement. Trade Docs may use it to drive workflow but must not reinterpret or mutate the legal requirement."
+    },
+    "regulatoryDocumentRequirementSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "regulatory_decision_reference",
+        "requirements",
+        "legal_time",
+        "knowledge_time",
+        "determined_at"
+      ],
+      "properties": {
+        "regulatory_decision_reference": {
+          "$ref": "#/$defs/regulatoryDecisionReference"
+        },
+        "requirements": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/$defs/regulatoryDocumentRequirementProjection"
+          }
+        },
+        "legal_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "knowledge_time": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "determined_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "documentaryVerificationSnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verification_state",
+        "observed_at"
+      ],
+      "properties": {
+        "verification_state": {
+          "$ref": "../../trade-document/v2/domain.schema.json#/$defs/verificationState"
+        },
+        "reason_code": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/reasonCode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Point-in-time documentary verification fact from Trade Docs. It is not regulatory sufficiency."
+    },
+    "documentaryValiditySnapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "temporal_validity_state",
+        "observed_at"
+      ],
+      "properties": {
+        "temporal_validity_state": {
+          "$ref": "../../trade-document/v2/domain.schema.json#/$defs/temporalValidityState"
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Point-in-time issuer/authority-relative validity projection from Trade Docs."
+    },
+    "documentEvidenceFactBundle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_version_reference",
+        "document_type",
+        "document_family",
+        "issuer_claim",
+        "verification",
+        "temporal_validity",
+        "subject_references",
+        "documentary_assertions",
+        "content_artifact_references",
+        "facts_observed_at"
+      ],
+      "properties": {
+        "document_version_reference": {
+          "$ref": "#/$defs/documentVersionReference"
+        },
+        "document_type": {
+          "$ref": "../../trade-document/v2/domain.schema.json#/$defs/documentTypeCode"
+        },
+        "document_family": {
+          "$ref": "../../trade-document/v2/domain.schema.json#/$defs/documentFamily"
+        },
+        "issuer_claim": {
+          "$ref": "../../trade-document/v2/domain.schema.json#/$defs/issuerClaim"
+        },
+        "issued_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "effective_from": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "effective_to": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        },
+        "verification": {
+          "$ref": "#/$defs/documentaryVerificationSnapshot"
+        },
+        "temporal_validity": {
+          "$ref": "#/$defs/documentaryValiditySnapshot"
+        },
+        "subject_references": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": {
+            "$ref": "../../cross-engine-reference/v1/domain.schema.json#/$defs/crossEngineObjectReference"
+          }
+        },
+        "content_artifact_references": {
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 64,
+          "items": {
+            "$ref": "#/$defs/contentArtifactReference"
+          }
+        },
+        "facts_observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "documentary_assertions": {
+          "type": "array",
+          "maxItems": 256,
+          "items": {
+            "$ref": "#/$defs/documentaryAssertion"
+          }
+        }
+      },
+      "description": "Trade Docs-owned documentary facts supplied to Regulations for legal sufficiency assessment. This is a bounded projection, not a copy of the full TradeDocument aggregate and not a regulatory conclusion."
+    },
+    "requirementResolveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_id",
+        "requirement_reference"
+      ],
+      "properties": {
+        "context_id": {
+          "$ref": "#/$defs/contextId"
+        },
+        "requirement_reference": {
+          "$ref": "#/$defs/regulatoryRequirementReference"
+        }
+      }
+    },
+    "requirementResolveResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requirement"
+      ],
+      "properties": {
+        "requirement": {
+          "$ref": "#/$defs/regulatoryDocumentRequirementProjection"
+        }
+      }
+    },
+    "documentEvidenceResolveRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_id",
+        "document_version_references"
+      ],
+      "properties": {
+        "context_id": {
+          "$ref": "#/$defs/contextId"
+        },
+        "document_version_references": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/documentVersionReference"
+          }
+        }
+      }
+    },
+    "documentEvidenceResolveResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence"
+      ],
+      "properties": {
+        "evidence": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/documentEvidenceFactBundle"
+          }
+        }
+      }
+    },
+    "documentEvidenceAssessmentRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "context_id",
+        "regulatory_decision_reference",
+        "requirement_reference",
+        "assessment_reason",
+        "evidence"
+      ],
+      "properties": {
+        "context_id": {
+          "$ref": "#/$defs/contextId"
+        },
+        "regulatory_decision_reference": {
+          "$ref": "#/$defs/regulatoryDecisionReference"
+        },
+        "requirement_reference": {
+          "$ref": "#/$defs/regulatoryRequirementReference"
+        },
+        "assessment_reason": {
+          "$ref": "#/$defs/assessmentReason"
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/documentEvidenceFactBundle"
+          }
+        }
+      }
+    },
+    "rejectedEvidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document_version_reference",
+        "reason_codes"
+      ],
+      "properties": {
+        "document_version_reference": {
+          "$ref": "#/$defs/documentVersionReference"
+        },
+        "reason_codes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 32,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reasonCode"
+          }
+        }
+      }
+    },
+    "documentEvidenceAssessmentResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assessment_reference",
+        "regulatory_decision_reference",
+        "requirement_reference",
+        "outcome",
+        "accepted_document_version_references",
+        "rejected_evidence",
+        "reason_codes",
+        "evaluated_at"
+      ],
+      "properties": {
+        "assessment_reference": {
+          "$ref": "#/$defs/regulatoryEvidenceAssessmentReference"
+        },
+        "regulatory_decision_reference": {
+          "$ref": "#/$defs/regulatoryDecisionReference"
+        },
+        "requirement_reference": {
+          "$ref": "#/$defs/regulatoryRequirementReference"
+        },
+        "outcome": {
+          "$ref": "#/$defs/satisfactionOutcome"
+        },
+        "accepted_document_version_references": {
+          "type": "array",
+          "maxItems": 50,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/documentVersionReference"
+          }
+        },
+        "rejected_evidence": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/$defs/rejectedEvidence"
+          }
+        },
+        "reason_codes": {
+          "type": "array",
+          "maxItems": 64,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/reasonCode"
+          }
+        },
+        "resulting_regulatory_decision_reference": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/regulatoryDecisionReference"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "New/superseding RegulatoryDecision when the evidence assessment materially changes the wider regulatory decision."
+        },
+        "evaluated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "Regulations-owned legal sufficiency result. It does not mutate the TradeDocument or operational shipment state."
+    },
+    "contextId": {
+      "$ref": "../../control-plane/v1/domain.schema.json#/$defs/uuid",
+      "description": "Persisted Control Plane PlatformContext identifier. The receiving resource server must validate/redeem it against the authenticated caller; it is not a bearer credential."
+    },
+    "assertionOrigin": {
+      "type": "string",
+      "enum": [
+        "ISSUER_ASSERTED",
+        "BAOBAB_EXTRACTED",
+        "BAOBAB_GENERATED",
+        "EXTERNAL_NORMALIZED"
+      ],
+      "description": "How the documentary assertion entered the Trade Docs projection. Extraction/normalization does not silently become an issuer assertion."
+    },
+    "documentaryAssertion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "element_code",
+        "origin",
+        "value",
+        "observed_at"
+      ],
+      "properties": {
+        "element_code": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9_.-]{1,127}$"
+        },
+        "origin": {
+          "$ref": "#/$defs/assertionOrigin"
+        },
+        "value": {
+          "oneOf": [
+            {
+              "type": "string",
+              "maxLength": 2048
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "unit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 64
+        },
+        "currency": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z]{3}$"
+        },
+        "source_artifact_reference": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/contentArtifactReference"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "field_verification_state": {
+          "oneOf": [
+            {
+              "$ref": "../../trade-document/v2/domain.schema.json#/$defs/verificationState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "description": "One bounded documentary assertion projected by Trade Docs. It preserves whether the value was issuer-asserted, extracted, generated or normalized; Regulations decides whether it is acceptable evidence."
+    }
+  }
+}

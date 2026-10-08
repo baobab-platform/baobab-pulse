@@ -64,3 +64,20 @@ DecisionRepository = Repository[Decision]
 ModelRepository = Repository[Model]
 IntelligenceProductRepository = Repository[IntelligenceProduct]
 ResearchMissionRepository = Repository[ResearchMission]
+
+
+class EvidenceSetHydrationPort(Protocol):
+    """Extends the plain ``EvidenceSetRepository`` with the text-resolution
+    read ``application.services.evidence_retrieval_service`` needs to
+    hydrate a canonical ``EvidenceSet`` *and* the text its Evidence entries
+    were projected/embedded from (Qdrant refactor item 28-29) — Evidence
+    itself carries no text, so canonical hydration means resolving both.
+
+    A separate ``Protocol`` rather than adding this to ``Repository[T]``:
+    every other aggregate's repository has no equivalent need today, and
+    ``Repository[T]`` stays the minimal, uniform shape ADR-PULSE-002 §76
+    describes."""
+
+    async def get_with_text(self, entity_id: str) -> tuple[EvidenceSet, dict[str, str]] | None: ...
+
+    async def current_version(self, entity_id: str) -> int | None: ...

@@ -10,20 +10,78 @@ jobs:
     runs-on: ubuntu-26.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - run: test -f README.md && test -f .nabhold/environment.yaml && test -f .devcontainer/devcontainer.json
+      - run: test -f README.md && test -f .baobab/environment.yaml && test -f .devcontainer/devcontainer.json
 
   quality:
     runs-on: ubuntu-26.04
+    # PostgreSQL + Qdrant service containers (Qdrant refactor item 100-101):
+    # the default test suite still needs neither (PostgreSQL-dependent tests
+    # skip gracefully with no live database; Qdrant is exercised embedded/
+    # in-process) — these let the same tests actually run for real in CI
+    # instead of only skipping.
+    services:
+      postgres:
+        image: postgres:17.11-bookworm
+        env:
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: pulse
+          POSTGRES_DB: baobab_pulse
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pulse -d baobab_pulse"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      qdrant:
+        image: qdrant/qdrant:v1.19.1
+        ports:
+          - 6333:6333
+        options: >-
+          --health-cmd "bash -c '</dev/tcp/localhost/6333'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PULSE_DATABASE_URL: postgresql://pulse:pulse@localhost:5432/baobab_pulse
+      PULSE_QDRANT_URL: http://localhost:6333
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
+      - name: Read pinned Shared commit
+        id: pin
+        run: echo "commit=$(grep -m1 'commit:' contracts.lock.yaml | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Checkout pinned Shared contracts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: baobab-platform/shared
+          ref: ${{ steps.pin.outputs.commit }}
+          path: .shared-contracts
+          token: ${{ secrets.SHARED_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Verify pinned contract fixtures
+        env:
+          EXPECTED_SHARED_COMMIT: ${{ steps.pin.outputs.commit }}
+        run: |
+          test "$(git -C .shared-contracts rev-parse HEAD)" = "$EXPECTED_SHARED_COMMIT"
+          while IFS= read -r path; do
+            cmp ".shared-contracts/$path" "tests/fixtures/$path"
+          done < <(sed -n 's/^  - \(contracts\/.*\)$/\1/p' contracts.lock.yaml)
+
       - name: Install uv
-        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6 (verified live 2026-08-25)
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v6 (verified live 2026-08-25)
         with:
           enable-cache: true
 
       - name: Sync dependencies
         run: uv sync --locked --all-groups
+
+      - name: Validate capability provider declaration against pinned Shared
+        run: >-
+          uv run python .shared-contracts/scripts/capability_catalogue.py
+          validate-declaration .baobab/capability-provider.yaml
+          --engine-id baobab-pulse
+          --repository-root .
 
       - name: Lint (ruff)
         run: uv run ruff check .
@@ -31,5 +89,8 @@ jobs:
       - name: Type-check (mypy --strict)
         run: uv run mypy src
 
-      - name: Test (pytest, no external services or model-provider credentials required)
+      - name: Apply database migrations
+        run: uv run python scripts/migrate.py
+
+      - name: Test (pytest; PostgreSQL/Qdrant-dependent tests run for real against the services above)
         run: uv run pytest -m "not provider"

@@ -1,0 +1,389 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.baobab-platform.com/trade-document/v2/events.schema.json",
+  "title": "TradeDocument v2 cross-engine event payloads",
+  "description": "Minimal canonical fact payloads for ACTIVE documents.* v2 events produced under ADR-SHARED-023 by baobab-trade-docs. Commands, Regulations conclusions and Customs workflow events remain outside this contract.",
+  "$defs": {
+    "tradeDocumentCreatedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "tenant_id",
+        "document_type",
+        "document_family",
+        "lifecycle_state",
+        "aggregate_version"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "document_type": {
+          "$ref": "domain.schema.json#/$defs/documentTypeCode"
+        },
+        "document_family": {
+          "$ref": "domain.schema.json#/$defs/documentFamily"
+        },
+        "lifecycle_state": {
+          "$ref": "domain.schema.json#/$defs/documentLifecycleState"
+        },
+        "aggregate_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "tradeDocumentIssuedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "tenant_id",
+        "document_type",
+        "document_family",
+        "current_version_id",
+        "issued_at",
+        "aggregate_version"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "document_type": {
+          "$ref": "domain.schema.json#/$defs/documentTypeCode"
+        },
+        "document_family": {
+          "$ref": "domain.schema.json#/$defs/documentFamily"
+        },
+        "current_version_id": {
+          "$ref": "domain.schema.json#/$defs/documentVersionId"
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "aggregate_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "tradeDocumentSupersededEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "tenant_id",
+        "superseded_by_trade_document_id",
+        "superseded_at",
+        "aggregate_version"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "superseded_by_trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "superseded_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "aggregate_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "tradeDocumentVoidedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "tenant_id",
+        "voided_at",
+        "aggregate_version"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "voided_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000
+        },
+        "aggregate_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "documentVersionCreatedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "tenant_id",
+        "version_sequence",
+        "lifecycle_snapshot",
+        "created_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "domain.schema.json#/$defs/documentVersionId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "version_sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "lifecycle_snapshot": {
+          "$ref": "domain.schema.json#/$defs/documentLifecycleState"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "documentVersionIssuedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "tenant_id",
+        "version_sequence",
+        "issued_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "domain.schema.json#/$defs/documentVersionId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "version_sequence": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "issued_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "documentVersionVerificationChangedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "tenant_id",
+        "verification_state",
+        "changed_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "domain.schema.json#/$defs/documentVersionId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "previous_verification_state": {
+          "oneOf": [
+            {
+              "$ref": "domain.schema.json#/$defs/verificationState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "verification_state": {
+          "$ref": "domain.schema.json#/$defs/verificationState"
+        },
+        "reason_code": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[A-Z][A-Z0-9_]{2,127}$"
+        },
+        "changed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "contentArtifactRegisteredEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "artifact_id",
+        "tenant_id",
+        "artifact_role",
+        "media_type",
+        "digest_algorithm",
+        "digest_value",
+        "registered_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "domain.schema.json#/$defs/documentVersionId"
+        },
+        "artifact_id": {
+          "$ref": "domain.schema.json#/$defs/contentArtifactId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "artifact_role": {
+          "$ref": "domain.schema.json#/$defs/artifactRole"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 128
+        },
+        "digest_algorithm": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 64
+        },
+        "digest_value": {
+          "type": "string",
+          "minLength": 16,
+          "maxLength": 512
+        },
+        "registered_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "documentRelationshipCreatedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "relationship_id",
+        "tenant_id",
+        "source_document_id",
+        "target_document_id",
+        "relationship_type",
+        "created_at"
+      ],
+      "properties": {
+        "relationship_id": {
+          "$ref": "domain.schema.json#/$defs/documentRelationshipId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "source_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "target_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "relationship_type": {
+          "$ref": "domain.schema.json#/$defs/relationshipType"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "documentVersionValidityChangedEventData": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "trade_document_id",
+        "document_version_id",
+        "tenant_id",
+        "temporal_validity_state",
+        "changed_at"
+      ],
+      "properties": {
+        "trade_document_id": {
+          "$ref": "domain.schema.json#/$defs/tradeDocumentId"
+        },
+        "document_version_id": {
+          "$ref": "domain.schema.json#/$defs/documentVersionId"
+        },
+        "tenant_id": {
+          "$ref": "../../control-plane/v1/domain.schema.json#/$defs/tenantId"
+        },
+        "previous_temporal_validity_state": {
+          "oneOf": [
+            {
+              "$ref": "domain.schema.json#/$defs/temporalValidityState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "temporal_validity_state": {
+          "$ref": "domain.schema.json#/$defs/temporalValidityState"
+        },
+        "authority_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 256
+        },
+        "basis_reference": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 512
+        },
+        "changed_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    }
+  }
+}

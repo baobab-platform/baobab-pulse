@@ -1,4 +1,4 @@
-.PHONY: sync lint format typecheck test test-all security build run migrate compose-up compose-down clean
+.PHONY: sync lint format typecheck test test-all security build run migrate rebuild-projection compose-up compose-down clean
 
 sync:
 	uv sync --all-groups
@@ -31,6 +31,9 @@ run:
 
 migrate:
 	uv run python scripts/migrate.py
+
+rebuild-projection:
+	uv run python scripts/rebuild_projection.py
 
 compose-up:
 	docker compose up --build

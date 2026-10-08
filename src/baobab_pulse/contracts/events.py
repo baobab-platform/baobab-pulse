@@ -1,11 +1,11 @@
 """The Baobab cross-engine event envelope (CloudEvents 1.0 profile).
 
-Field-for-field mirror of ``nabhold/shared``'s
+Field-for-field mirror of ``baobab-platform/shared``'s
 ``contracts/events/v1/envelope.schema.json`` (vendored for offline contract
 testing at ``tests/fixtures/contracts/envelope.schema.json`` — see
 ``tests/contract/test_event_envelope_contract.py``). Do not add, rename, or
 loosen a field here without updating that vendored copy and re-confirming
-against the live schema in ``nabhold/shared`` — this module has no authority
+against the live schema in ``baobab-platform/shared`` — this module has no authority
 of its own over the shape, it only implements it.
 
 Pulse never emits an event without going through
@@ -22,20 +22,26 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-_TYPE_PATTERN = re.compile(r"^com\.nabhold\.[a-z0-9]+(?:[.-][a-z0-9]+)*\.v[1-9][0-9]*$")
+_TYPE_PATTERN = re.compile(r"^com\.baobab-platform\.[a-z0-9]+(?:[.-][a-z0-9]+)*\.v[1-9][0-9]*$")
 _TRACEPARENT_PATTERN = re.compile(
     r"^00-(?!00000000000000000000000000000000)[0-9a-f]{32}-(?!0000000000000000)[0-9a-f]{16}-[0-9a-f]{2}$"
 )
 _IDEMPOTENCY_KEY_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]*$")
 _TENANT_ID_PATTERN = re.compile(r"^tn_[a-z0-9]+$")
-"""Control Plane-minted tenant id shape (``nabhold/shared``
+"""Control Plane-minted tenant id shape (``baobab-platform/shared``
 ``contracts/control-plane/v1/domain.schema.json#/$defs/tenantId``) — Pulse
 never mints this identifier itself, it only carries what the Control Plane
 issued (INV-PULSE-004)."""
 
 
 class PulseEventEnvelope(BaseModel):
-    """A ``com.nabhold.pulse.<entity>.<verb>.vN`` cross-engine event."""
+    """A local Pulse envelope for a future ``com.baobab-platform.intelligence.<entity>.<verb>.vN`` event.
+
+    RTD-09 reserves the intelligence context but activates no producer event.
+    P-CAP-05 may persist an envelope-shaped candidate only when its durable
+    outbox state is HELD_UNREGISTERED; this model does not itself authorize
+    publication.
+    """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -92,9 +98,13 @@ class PulseEventEnvelope(BaseModel):
 
 
 def build_event_type(entity: str, verb: str, *, version: int = 1) -> str:
-    """Build a ``com.nabhold.pulse.<entity>.<verb>.vN`` event type string,
-    validating it against the same pattern the envelope enforces."""
-    event_type = f"com.nabhold.pulse.{entity}.{verb}.v{version}"
+    """Build a future ``com.baobab-platform.intelligence.<entity>.<verb>.vN`` type.
+
+    Shared currently reserves, but does not activate, the intelligence event
+    context. This helper is therefore local scaffold only until a future
+    Shared event-registration decision lands.
+    """
+    event_type = f"com.baobab-platform.intelligence.{entity}.{verb}.v{version}"
     if not _TYPE_PATTERN.match(event_type):
         raise ValueError(f"constructed event type {event_type!r} does not match the org's event-type pattern")
     return event_type

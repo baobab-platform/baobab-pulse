@@ -1,0 +1,40 @@
+# The baobab-platform/shared contracts this engine consumes (EA Plan v2.0
+# EA-01A; schema: shared .baobab/contract-consumer-lock.schema.json).
+# tests/fixtures/contracts holds byte-for-byte copies of these files at the
+# pinned commit; tests/contract validates Pulse's envelope and problem
+# models against them. Foundation checks the pin and reports drift.
+schema: baobab-contract-consumer-lock
+version: "1.0"
+source:
+  repository: baobab-platform/shared
+  commit: f61de9c5141e432b32cc3b585aafa7d1b6727716
+contracts:
+  - contracts/authorization/v1/scope-registry.yaml
+  - contracts/identity/v1/workload-registry.yaml
+  - contracts/capability/v1/catalogue.yaml
+  - contracts/capability/v1/certification.schema.json
+  - contracts/capability/v1/registration-bundles.yaml
+  - contracts/control-plane/v1/domain.schema.json
+  - contracts/control-plane/v1/platform-context.schema.json
+  - contracts/cross-engine-reference/v1/domain.schema.json
+  - contracts/errors/v1/problem-details.schema.json
+  - contracts/events/v1/envelope.schema.json
+  - contracts/identity/v1/workload-token-response.schema.json
+  - contracts/intelligence/v1/capabilities.yaml
+  - contracts/intelligence/v1/domain.schema.json
+  - contracts/intelligence/v1/pulse-registration.json
+  - contracts/regulatory-document-exchange/v1/domain.schema.json
+  - contracts/regulatory-document-exchange/v1/events.schema.json
+  - contracts/trade-document/v2/domain.schema.json
+  - contracts/trade-document/v2/events.schema.json
+  - contracts/topology/v1/release-policy.yaml
+policy:
+  updates: explicit_pull_request
+  compatibility: validate_before_merge
+# Repository-specific invariants, carried over from the legacy lock.
+consumer:
+  repository: baobab-platform/baobab-pulse
+consumer_policy:
+  fail_on_unresolved_tenant_context: true
+  allow_cross_engine_database_access: false
+  allow_local_redefinition_as_canonical: false

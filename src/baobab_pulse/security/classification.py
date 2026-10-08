@@ -30,3 +30,14 @@ def may_access(*, requester_clearance: Classification, object_classification: Cl
     instructions are never a substitute for enforcement).
     """
     return _CLEARANCE_ORDER.index(requester_clearance) >= _CLEARANCE_ORDER.index(object_classification)
+
+
+def allowed_classifications(requester_clearance: Classification) -> tuple[Classification, ...]:
+    """Every classification level ``requester_clearance`` may access.
+
+    Used to build a Qdrant/Haystack ``in`` filter *before* a semantic query
+    is issued (item 45-46: classification filtering happens structurally,
+    not by post-filtering an unrestricted result set).
+    """
+    ceiling = _CLEARANCE_ORDER.index(requester_clearance)
+    return _CLEARANCE_ORDER[: ceiling + 1]

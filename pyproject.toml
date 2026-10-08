@@ -13,9 +13,12 @@ dependencies = [
     "jsonschema>=4.23,<5",
     "opentelemetry-api>=1.27,<2",
     "opentelemetry-sdk>=1.27,<2",
+    "pyjwt[crypto]>=2.15.1,<3",
     "pydantic>=2.9,<3",
     "pydantic-settings>=2.6,<3",
     "python-dotenv>=1.0,<2",
+    "qdrant-client>=1.19,<2",
+    "qdrant-haystack>=10.6,<11",
     "uvicorn>=0.32,<1",
 ]
 
@@ -41,6 +44,7 @@ security = [
 ]
 
 [tool.ruff]
+extend-exclude = [".shared-contracts"] # checked as pinned data; Shared owns its source lint policy
 line-length = 110
 target-version = "py314"
 src = ["src", "tests"]
@@ -90,7 +94,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 markers = [
     "architecture: enforces module dependency boundaries",
-    "contract: validates payloads against nabhold/shared contract schemas",
+    "contract: validates payloads against baobab-platform/shared contract schemas",
     "provider: requires a real, credentialed model-provider API (opt-in, excluded by default)",
 ]
 # The default test run excludes "provider" tests — see the Makefile's "test" target
