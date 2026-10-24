@@ -108,7 +108,8 @@ class ClientCredentialsTokenProvider:
             if (
                 not isinstance(token, str)
                 or len(token) < 20
-                or token_type != "Bearer"
+                or not isinstance(token_type, str)
+                or token_type.casefold() != "bearer"
                 or not isinstance(expires_in, int)
                 or isinstance(expires_in, bool)
                 or not 60 <= expires_in <= 86400

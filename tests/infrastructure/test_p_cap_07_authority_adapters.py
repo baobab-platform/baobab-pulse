@@ -158,8 +158,10 @@ async def test_oidc_authenticator_distinguishes_jwks_unavailability() -> None:
         await authenticator.authenticate(_token())
 
 
+@pytest.mark.parametrize("token_type", ["Bearer", "bearer", "BEARER"])
 async def test_validator_token_provider_caches_short_lived_token(
     monkeypatch: pytest.MonkeyPatch,
+    token_type: str,
 ) -> None:
     calls: list[object] = []
 
@@ -168,7 +170,7 @@ async def test_validator_token_provider_caches_short_lived_token(
         return _Response(
             {
                 "access_token": _VALIDATOR_TOKEN,
-                "token_type": "Bearer",
+                "token_type": token_type,
                 "expires_in": 300,
                 "scope": "context:validate",
             }
