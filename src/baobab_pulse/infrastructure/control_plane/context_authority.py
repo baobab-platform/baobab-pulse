@@ -75,6 +75,10 @@ class ClientCredentialsTokenProvider:
                     "client_id": self._client_id,
                     "client_secret": self._client_secret,
                     "scope": self._scope,
+                    # The validator calls CP, not the Pulse resource server.
+                    # Hydra requires an explicit requested audience; scope or
+                    # the client registration alone does not select one.
+                    "audience": "baobab-control-plane",
                 }
             ).encode("ascii")
             request = urllib.request.Request(
