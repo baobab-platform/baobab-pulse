@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import time
 import urllib.error
+import urllib.parse
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 from uuid import UUID
@@ -157,8 +158,10 @@ async def test_oidc_authenticator_distinguishes_jwks_unavailability() -> None:
         await authenticator.authenticate(_token())
 
 
+@pytest.mark.parametrize("token_type", ["Bearer", "bearer", "BEARER"])
 async def test_validator_token_provider_caches_short_lived_token(
     monkeypatch: pytest.MonkeyPatch,
+    token_type: str,
 ) -> None:
     calls: list[object] = []
 
@@ -167,7 +170,7 @@ async def test_validator_token_provider_caches_short_lived_token(
         return _Response(
             {
                 "access_token": _VALIDATOR_TOKEN,
-                "token_type": "Bearer",
+                "token_type": token_type,
                 "expires_in": 300,
                 "scope": "context:validate",
             }
@@ -184,6 +187,13 @@ async def test_validator_token_provider_caches_short_lived_token(
     assert await provider.access_token() == _VALIDATOR_TOKEN
     assert await provider.access_token() == _VALIDATOR_TOKEN
     assert len(calls) == 1
+    request, _ = calls[0]  # type: ignore[misc]
+    assert isinstance(request, context_module.urllib.request.Request)
+    fields = urllib.parse.parse_qs(request.data.decode("ascii"))
+    assert fields["audience"] == ["baobab-control-plane"]
+    assert fields["scope"] == ["context:validate"]
+    assert fields["client_id"] == ["baobab-pulse-workload"]
+
 
 
 async def test_context_authority_sends_actual_subject_token_only_in_post_body(
