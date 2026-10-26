@@ -84,6 +84,18 @@ class Dev15AdapterTests(unittest.TestCase):
             with self.subTest(raw=raw), patch.object(ADAPTER.urllib.request, "urlopen", return_value=Response(raw)):
                 self.assertEqual(ADAPTER.observe_ready("http://127.0.0.1:8000/readyz"), expected)
 
+    def test_integration_image_bases_are_digest_locked(self):
+        dockerfile = PATH.parents[1] / "Dockerfile.integration"
+        source = dockerfile.read_text()
+        for line in source.splitlines():
+            if line.startswith("FROM "):
+                self.assertIn("@sha256:", line, "Development images cannot float")
+        self.assertIn(
+            "ghcr.io/astral-sh/uv:0.8.17@sha256:",
+            source,
+            "Pinned uv binary provenance is required",
+        )
+
     def test_invalid_phase_rejected(self):
         with self.assertRaisesRegex(ValueError, "UNKNOWN_OWNER_PHASE"):
             ADAPTER.run("approve")
