@@ -21,7 +21,8 @@ class CapabilityInvocation:
 class CapabilityInvocationAuthority(Protocol):
     async def authorise(
         self, *, context: TrustedPlatformContext, caller: AuthenticatedCaller
-    ) -> CapabilityInvocation: ...
+    ) -> CapabilityInvocation:
+        raise NotImplementedError("current capability authority must be implemented")
 
 
 class EvidenceReadAudit(Protocol):
@@ -33,4 +34,5 @@ class EvidenceReadAudit(Protocol):
         invocation: CapabilityInvocation,
         evidence_set_id: str | None,
         result_count: int,
-    ) -> None: ...
+    ) -> None:
+        raise NotImplementedError("durable evidence-read audit must be implemented")

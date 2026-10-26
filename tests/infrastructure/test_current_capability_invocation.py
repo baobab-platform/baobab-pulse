@@ -26,6 +26,7 @@ _CLIENT = httpx.AsyncClient
         "unentitled-resource",
         "wrong-context",
         "wrong-provider",
+        "boolean-contract",
         "wrong-instance",
         "wrong-reference",
         "wrong-correlation",
@@ -70,6 +71,8 @@ async def test_every_invocation_requires_a_fresh_matching_resolution(
             response["context_id"] = str(UUID(int=2))
         elif mutation == "wrong-correlation":
             response["correlation_id"] = str(UUID(int=2))
+        elif mutation == "boolean-contract":
+            response["invocation"]["contract_version"] = True
         elif mutation == "wrong-provider":
             response["invocation"]["provider_id"] = "provider_" + "9" * 32
         elif mutation == "wrong-instance":

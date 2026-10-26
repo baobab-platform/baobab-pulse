@@ -86,6 +86,7 @@ class HttpCapabilityInvocationAuthority:
                 or result.get("correlation_id") != correlation
                 or type(result.get("contract_version")) is not int
                 or result["contract_version"] != 1
+                or type(invocation.get("contract_version")) is not int
                 or invocation.get("contract_version") != 1
                 or invocation.get("provider_id") != self._provider
                 or invocation.get("engine_instance_id") != self._instance
