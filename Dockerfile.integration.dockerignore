@@ -1,0 +1,21 @@
+# Integration-only Docker context policy. The production .dockerignore
+# still excludes scripts/ and tests/ from the production image.
+# This file deliberately permits the synthetic integration runner's native
+# migrations and tests; it never permits local credentials, git history or
+# developer virtualenvs into the build context.
+.git
+.github
+.devcontainer
+.venv
+.mypy_cache
+.ruff_cache
+.pytest_cache
+__pycache__
+*.pyc
+docs
+examples
+*.md
+!README.md
+.env
+.env.*
+docker-compose.yml

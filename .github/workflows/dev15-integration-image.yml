@@ -1,0 +1,49 @@
+name: DEV-15 Pulse native integration image
+on:
+  pull_request:
+    paths:
+      - 'Dockerfile.integration'
+      - '.baobab/development_adapter.py'
+      - 'tests/architecture/test_dev15_development_adapter.py'
+      - '.github/workflows/dev15-integration-image.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'Dockerfile.integration'
+      - '.baobab/development_adapter.py'
+      - 'tests/architecture/test_dev15_development_adapter.py'
+      - '.github/workflows/dev15-integration-image.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-image-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Build actual Pulse owner image from pinned integration Dockerfile
+        run: docker build --file Dockerfile.integration --tag baobab-pulse:dev15-source .
+      - name: Verify production module and native adapter exist in built image
+        run: |
+          set -euo pipefail
+          docker run --rm --network none --entrypoint python baobab-pulse:dev15-source \
+            -c 'import baobab_pulse.api.main; import pathlib; assert pathlib.Path("/app/.baobab/development_adapter.py").is_file()'
+      - name: Unqualified native exercise remains denied
+        run: |
+          set -euo pipefail
+          if docker run --rm --network none --entrypoint python baobab-pulse:dev15-source \
+               /app/.baobab/development_adapter.py exercise > "$RUNNER_TEMP/dev15.json"; then
+            echo "::error::Unqualified Pulse exercise unexpectedly passed"
+            exit 1
+          fi
+          python3 - "$RUNNER_TEMP/dev15.json" <<'PY'
+          import json,sys
+          row=json.load(open(sys.argv[1]))
+          assert row["result"]=="BLOCKED"
+          assert row["runtime_eng_onb_qualified"] is False
+          assert row["protected_acceptance"] is False
+          assert row["production_authorized"] is False
+          PY
