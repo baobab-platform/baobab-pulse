@@ -339,7 +339,6 @@ def test_legacy_unauthenticated_create_route_is_retired() -> None:
     assert response.status_code in {404, 405}
 
 
-
 def test_invalid_correlation_id_is_rejected_with_replacement_error_correlation() -> None:
     runtime, _, _ = _fixtures()
     with TestClient(create_app(runtime)) as client:
@@ -353,7 +352,6 @@ def test_invalid_correlation_id_is_rejected_with_replacement_error_correlation()
     assert response.json()["code"] == "CAPABILITY_REQUEST_INVALID"
     replacement = UUID(response.headers["X-Correlation-Id"])
     assert response.json()["correlation_id"] == str(replacement)
-
 
 
 class RestrictedResearchAuthenticator:
@@ -436,6 +434,7 @@ def test_get_above_clearance_is_non_disclosing_404() -> None:
     assert response.status_code == 404
     assert response.json()["code"] == "RESEARCH_MISSION_NOT_FOUND"
 
+
 class MissingResearchScopeAuthenticator:
     async def authenticate(self, access_token: str) -> AuthenticatedCaller:
         assert access_token == _TOKEN
@@ -475,4 +474,3 @@ def test_restricted_scope_alone_cannot_manage_research_or_redeem_context() -> No
     assert response.status_code == 403
     assert authority.calls == 0
     assert mutation_store.commits == []
-

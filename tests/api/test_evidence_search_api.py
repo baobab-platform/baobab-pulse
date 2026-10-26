@@ -7,6 +7,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.authority_fakes import AllowedInvocationAuthority, RecordingReadAudit
 
 from baobab_pulse.api import dependencies
 from baobab_pulse.api.main import create_app
@@ -114,6 +115,8 @@ def _runtime(
     service = EvidenceSearchCapabilityService(
         context_authority=authority or FakeContextAuthority(),
         retrieval=actual_retrieval,
+        invocation_authority=AllowedInvocationAuthority(),
+        read_audit=RecordingReadAudit(),
     )
     return (
         CapabilityApiRuntime(
@@ -210,9 +213,7 @@ def test_caller_cannot_select_classification_clearance() -> None:
 
 
 def test_context_not_owned_or_expired_is_indistinguishable_not_found() -> None:
-    runtime, _ = _runtime(
-        authority=FakeContextAuthority(error=ContextNotFoundError("not found"))
-    )
+    runtime, _ = _runtime(authority=FakeContextAuthority(error=ContextNotFoundError("not found")))
     with TestClient(create_app(runtime)) as client:
         response = client.post(
             "/evidence/search",
@@ -226,9 +227,7 @@ def test_context_not_owned_or_expired_is_indistinguishable_not_found() -> None:
 
 def test_control_plane_unavailability_is_retryable_503() -> None:
     runtime, _ = _runtime(
-        authority=FakeContextAuthority(
-            error=ContextAuthorityUnavailableError("cp unavailable")
-        )
+        authority=FakeContextAuthority(error=ContextAuthorityUnavailableError("cp unavailable"))
     )
     with TestClient(create_app(runtime)) as client:
         response = client.post(
@@ -252,7 +251,6 @@ def test_unconfigured_capability_runtime_fails_closed() -> None:
 
     assert response.status_code == 503
     assert response.json()["code"] == "CAPABILITY_RUNTIME_UNAVAILABLE"
-
 
 
 class RestrictedAuthenticator:
@@ -284,6 +282,8 @@ def test_restricted_scope_raises_evidence_clearance_only_with_operation_scope() 
     service = EvidenceSearchCapabilityService(
         context_authority=authority,
         retrieval=retrieval,
+        invocation_authority=AllowedInvocationAuthority(),
+        read_audit=RecordingReadAudit(),
     )
     runtime = CapabilityApiRuntime(
         authenticator=RestrictedAuthenticator(),
@@ -306,6 +306,8 @@ def test_restricted_scope_alone_cannot_invoke_evidence_search() -> None:
     service = EvidenceSearchCapabilityService(
         context_authority=authority,
         retrieval=retrieval,
+        invocation_authority=AllowedInvocationAuthority(),
+        read_audit=RecordingReadAudit(),
     )
     runtime = CapabilityApiRuntime(
         authenticator=MissingEvidenceScopeAuthenticator(),
@@ -321,3 +323,37 @@ def test_restricted_scope_alone_cannot_invoke_evidence_search() -> None:
     assert response.status_code == 403
     assert retrieval.clearance is None
     assert authority.calls == 0
+
+
+def test_missing_current_binding_authority_never_reaches_resource() -> None:
+    authority = FakeContextAuthority()
+    retrieval = RecordingRetrieval()
+    service = EvidenceSearchCapabilityService(context_authority=authority, retrieval=retrieval)
+    runtime = CapabilityApiRuntime(authenticator=FakeAuthenticator(), evidence_search=service)
+    with TestClient(create_app(runtime)) as client:
+        response = client.post(
+            "/evidence/search", json={"query_text": "must not execute"}, headers=_headers()
+        )
+    assert response.status_code == 503
+    assert retrieval.tenant_id is None
+
+
+def test_failed_resource_audit_never_returns_candidates() -> None:
+    from baobab_pulse.domain.shared.errors import CapabilityAuthorityUnavailableError
+
+    class FailedAudit(RecordingReadAudit):
+        async def record(self, **kwargs: object) -> None:
+            raise CapabilityAuthorityUnavailableError("audit unavailable")
+
+    retrieval = RecordingRetrieval()
+    service = EvidenceSearchCapabilityService(
+        context_authority=FakeContextAuthority(),
+        retrieval=retrieval,
+        invocation_authority=AllowedInvocationAuthority(),
+        read_audit=FailedAudit(),
+    )
+    runtime = CapabilityApiRuntime(authenticator=FakeAuthenticator(), evidence_search=service)
+    with TestClient(create_app(runtime)) as client:
+        response = client.post("/evidence/search", json={"query_text": "coffee exports"}, headers=_headers())
+    assert response.status_code == 503
+    assert "candidates" not in response.json()

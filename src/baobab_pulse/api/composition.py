@@ -5,6 +5,7 @@ from __future__ import annotations
 import urllib.parse
 
 from baobab_pulse.api.dependencies import (
+    get_database,
     get_evidence_retrieval_service,
     get_research_mission_mutation_store,
     get_research_mission_repository,
@@ -21,10 +22,12 @@ from baobab_pulse.configuration.settings import Environment, Settings
 from baobab_pulse.infrastructure.authentication.oidc_jwks import (
     OidcJwksWorkloadAuthenticator,
 )
+from baobab_pulse.infrastructure.control_plane.capability_invocation import HttpCapabilityInvocationAuthority
 from baobab_pulse.infrastructure.control_plane.context_authority import (
     ClientCredentialsTokenProvider,
     HttpControlPlaneContextAuthority,
 )
+from baobab_pulse.infrastructure.persistence.evidence_read_audit import PostgresEvidenceReadAudit
 
 
 def build_capability_runtime(
@@ -38,12 +41,12 @@ def build_capability_runtime(
         "iam_jwks_url": actual.iam_jwks_url,
         "iam_token_url": actual.iam_token_url,
         "iam_client_secret": (
-            actual.iam_client_secret.get_secret_value()
-            if actual.iam_client_secret is not None
-            else None
+            actual.iam_client_secret.get_secret_value() if actual.iam_client_secret is not None else None
         ),
-        "control_plane_context_validation_url":
-            actual.control_plane_context_validation_url,
+        "control_plane_context_validation_url": actual.control_plane_context_validation_url,
+        "control_plane_capability_resolution_url": actual.control_plane_capability_resolution_url,
+        "capability_provider_id": actual.capability_provider_id,
+        "engine_instance_id": actual.engine_instance_id,
     }
     present = {name for name, value in required.items() if value}
     if not present:
@@ -56,10 +59,7 @@ def build_capability_runtime(
 
     missing = sorted(name for name, value in required.items() if not value)
     if missing:
-        raise RuntimeError(
-            "incomplete Pulse capability-authority configuration: "
-            + ", ".join(missing)
-        )
+        raise RuntimeError("incomplete Pulse capability-authority configuration: " + ", ".join(missing))
 
     if actual.environment == Environment.PRODUCTION:
         insecure = sorted(
@@ -69,13 +69,13 @@ def build_capability_runtime(
                 "iam_jwks_url",
                 "iam_token_url",
                 "control_plane_context_validation_url",
+                "control_plane_capability_resolution_url",
             )
             if urllib.parse.urlsplit(required[name] or "").scheme.lower() != "https"
         )
         if insecure:
             raise RuntimeError(
-                "production Pulse capability authorities require HTTPS: "
-                + ", ".join(insecure)
+                "production Pulse capability authorities require HTTPS: " + ", ".join(insecure)
             )
 
     secret = actual.iam_client_secret
@@ -110,6 +110,12 @@ def build_capability_runtime(
     evidence = EvidenceSearchCapabilityService(
         context_authority=context_authority,
         retrieval=get_evidence_retrieval_service(),
+        invocation_authority=HttpCapabilityInvocationAuthority(
+            resolution_url=actual.control_plane_capability_resolution_url or "",
+            provider_id=actual.capability_provider_id or "",
+            engine_instance_id=actual.engine_instance_id or "",
+        ),
+        read_audit=PostgresEvidenceReadAudit(get_database()),
     )
     research = ResearchMissionManageCapabilityService(
         context_authority=context_authority,

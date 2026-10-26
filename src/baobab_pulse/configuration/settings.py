@@ -96,6 +96,9 @@ class Settings(BaseSettings):
     iam_max_token_lifetime_seconds: int = 900
     iam_clock_skew_seconds: int = 30
     control_plane_context_validation_url: str | None = None
+    control_plane_capability_resolution_url: str | None = None
+    capability_provider_id: str | None = None
+    engine_instance_id: str | None = None
     authority_http_timeout_seconds: float = 5.0
 
     api_host: str = "0.0.0.0"  # noqa: S104 -- container-internal bind, fronted by an ingress/load balancer
