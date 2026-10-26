@@ -87,7 +87,7 @@ async def test_search_raises_without_a_bound_tenant_context() -> None:
 
 async def test_search_flags_a_candidate_stale_when_the_canonical_version_has_advanced() -> None:
     semantic_retrieval = _FakeSemanticRetrieval((_candidate(canonical_version=7),))
-    hydration = _FakeHydration(current_versions={"evs_1": 8}, sets={})
+    hydration = _FakeHydration(current_versions={"evs_1": 8}, sets={"evs_1": (_evidence_set("evs_1",("evd_1",)).model_copy(update={"version":8}),{"evd_1":"canonical"})})
     service = EvidenceRetrievalService(semantic_retrieval=semantic_retrieval, hydration=hydration)
 
     with bind_tenant_context(TenantContext(tenant_id="tn_test01")):
@@ -99,7 +99,7 @@ async def test_search_flags_a_candidate_stale_when_the_canonical_version_has_adv
 
 async def test_search_does_not_flag_a_candidate_matching_the_current_canonical_version() -> None:
     semantic_retrieval = _FakeSemanticRetrieval((_candidate(canonical_version=7),))
-    hydration = _FakeHydration(current_versions={"evs_1": 7}, sets={})
+    hydration = _FakeHydration(current_versions={"evs_1": 7}, sets={"evs_1": (_evidence_set("evs_1",("evd_1",)).model_copy(update={"version":7}),{"evd_1":"canonical"})})
     service = EvidenceRetrievalService(semantic_retrieval=semantic_retrieval, hydration=hydration)
 
     with bind_tenant_context(TenantContext(tenant_id="tn_test01")):
@@ -187,7 +187,8 @@ async def test_hydrate_for_pipeline_narrows_text_to_only_the_matched_candidates(
         hydration=_FakeHydration(current_versions={"evs_1": 1}, sets={"evs_1": (evidence_set, full_text)}),
     )
 
-    hydrated_set, narrowed_text = await service.hydrate_for_pipeline(fresh_candidates)
+    with bind_tenant_context(TenantContext(tenant_id="tn_test01")):
+        hydrated_set, narrowed_text = await service.hydrate_for_pipeline(fresh_candidates)
 
     assert hydrated_set is evidence_set
     assert narrowed_text == {"evd_1": "text one", "evd_2": "text two"}
@@ -196,7 +197,41 @@ async def test_hydrate_for_pipeline_narrows_text_to_only_the_matched_candidates(
 async def _search_with(candidates: list[SemanticCandidate], *, current_versions: dict[str, int | None]) -> tuple:
     service = EvidenceRetrievalService(
         semantic_retrieval=_FakeSemanticRetrieval(tuple(candidates)),
-        hydration=_FakeHydration(current_versions=current_versions, sets={}),
+        hydration=_FakeHydration(current_versions=current_versions, sets={key:(_evidence_set(key,tuple(c.canonical_object_id for c in candidates if c.evidence_set_id==key)).model_copy(update={"version":version}),{c.canonical_object_id:"canonical" for c in candidates if c.evidence_set_id==key}) for key,version in current_versions.items() if version is not None}),
     )
     with bind_tenant_context(TenantContext(tenant_id="tn_test01")):
         return await service.search("query")
+
+
+@pytest.mark.parametrize("mutation", ["tenant", "classification", "entry", "private", "context"])
+async def test_cached_projection_metadata_never_overrides_canonical_authority(mutation: str) -> None:
+    document = _evidence_set("evs_1", ("evd_1",))
+    if mutation == "tenant":
+        document = document.model_copy(update={"tenant_context": TenantContext(tenant_id="tn_neighbour")})
+    elif mutation == "classification":
+        document = document.model_copy(update={"classification": Classification.RESTRICTED})
+    elif mutation == "entry":
+        document = document.model_copy(update={"entries": ()})
+    elif mutation == "private":
+        document = document.model_copy(update={"tenant_scope": TenantScope.PRIVATE})
+    else:
+        document = document.model_copy(update={"tenant_scope": TenantScope.CONTEXT, "tenant_context": TenantContext(tenant_id="tn_test01",context_id="other-context")})
+    service = EvidenceRetrievalService(semantic_retrieval=_FakeSemanticRetrieval((_candidate(),)),hydration=_FakeHydration(current_versions={"evs_1":1},sets={"evs_1":(document,{"evd_1":"canonical secret"})}))
+    with bind_tenant_context(TenantContext(tenant_id="tn_test01",context_id="current-context")):
+        assert await service.search("cached metadata says allowed",requester_clearance=Classification.CONFIDENTIAL)==()
+
+
+async def test_future_projection_version_is_stale_too() -> None:
+    results=await _search_with([_candidate(canonical_version=99)],current_versions={"evs_1":1})
+    assert len(results)==1 and results[0].is_stale is True
+
+
+async def test_classification_withdrawal_after_search_blocks_canonical_hydration() -> None:
+    document=_evidence_set("evs_1",("evd_1",))
+    hydration=_FakeHydration(current_versions={"evs_1":1},sets={"evs_1":(document,{"evd_1":"text"})})
+    service=EvidenceRetrievalService(semantic_retrieval=_FakeSemanticRetrieval((_candidate(),)),hydration=hydration)
+    with bind_tenant_context(TenantContext(tenant_id="tn_test01")):
+        results=await service.search("query")
+        hydration._sets["evs_1"]=(document.model_copy(update={"classification":Classification.RESTRICTED}),{"evd_1":"text"})
+        with pytest.raises(InvariantViolation):
+            await service.hydrate_for_pipeline(results)
