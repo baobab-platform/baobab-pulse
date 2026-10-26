@@ -16,6 +16,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlsplit
 
 PHASES = ("readiness", "migrate", "seed", "exercise", "cleanup")
 REASONS = {
@@ -47,8 +48,19 @@ def observe_ready(endpoint: str) -> bool:
         return False
     try:
         with urllib.request.urlopen(endpoint, timeout=3) as response:  # noqa: S310
-            return response.status == 200 and len(response.read(4097)) <= 4096
-    except (OSError, urllib.error.URLError):
+            if response.status != 200:
+                return False
+            body = response.read(4097)
+            if len(body) > 4096:
+                return False
+            observation = json.loads(body)
+            return (
+                isinstance(observation, dict)
+                and observation.get("status") == "ready"
+                and isinstance(observation.get("dependencies"), dict)
+                and observation["dependencies"].get("database") is True
+            )
+    except (OSError, ValueError, json.JSONDecodeError, urllib.error.URLError):
         return False
 
 
@@ -59,7 +71,24 @@ def migrate() -> bool:
         return False
     if os.environ.get("BAOBAB_ENVIRONMENT") != "development":
         return False
-    if not os.environ.get("PULSE_DATABASE_URL", "").startswith("postgresql://"):
+    # A caller-provided 'development' flag alone is NOT database authority.
+    # Require the privately named one-shot Pulse store; refuse loopback,
+    # public hosts, special PostgreSQL socket URLs or a reused server.
+    source = os.environ.get("PULSE_DATABASE_URL", "")
+    try:
+        endpoint = urlsplit(source)
+        if not (
+            endpoint.scheme == "postgresql"
+            and endpoint.hostname == "pulse-db"
+            and endpoint.port == 5432
+            and endpoint.path == "/pulse"
+            and bool(endpoint.username)
+            and bool(endpoint.password)
+            and endpoint.query == ""
+            and endpoint.fragment == ""
+        ):
+            return False
+    except ValueError:
         return False
     script = Path(__file__).resolve().parents[1] / "scripts" / "migrate.py"
     if not script.is_file():
