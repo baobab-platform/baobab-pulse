@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi.testclient import TestClient
+from tests.authority_fakes import AllowedInvocationAuthority
 
 from baobab_pulse.api.main import create_app
 from baobab_pulse.api.runtime import CapabilityApiRuntime
@@ -132,6 +133,7 @@ def _runtime(
         context_authority=authority,
         repository=repository,
         mutation_store=mutation_store,
+        invocation_authority=AllowedInvocationAuthority(),
     )
     evidence = EvidenceSearchCapabilityService(
         context_authority=authority,
@@ -453,6 +455,7 @@ def test_restricted_scope_alone_cannot_manage_research_or_redeem_context() -> No
         context_authority=authority,
         repository=repository,
         mutation_store=mutation_store,
+        invocation_authority=AllowedInvocationAuthority(),
     )
     evidence = EvidenceSearchCapabilityService(
         context_authority=authority,
@@ -474,3 +477,43 @@ def test_restricted_scope_alone_cannot_manage_research_or_redeem_context() -> No
     assert response.status_code == 403
     assert authority.calls == 0
     assert mutation_store.commits == []
+
+
+def test_mission_replay_and_get_recheck_current_binding_before_native_access() -> None:
+    from baobab_pulse.domain.shared.errors import CapabilityAccessDeniedError
+
+    class RevocableAuthority(AllowedInvocationAuthority):
+        active = True
+        calls = 0
+
+        async def authorise(self, *, context, caller):  # type: ignore[no-untyped-def]
+            self.calls += 1
+            if not self.active:
+                raise CapabilityAccessDeniedError("binding retired")
+            return await super().authorise(context=context, caller=caller)
+
+    runtime, repository, store = _fixtures()
+    authority = RevocableAuthority()
+    runtime.research_missions._invocation_authority = authority
+    with TestClient(create_app(runtime)) as client:
+        created = client.post("/research-missions/manage", json=_create_body(), headers=_headers())
+        assert created.status_code == 200
+        authority.active = False
+        replay = client.post("/research-missions/manage", json=_create_body(), headers=_headers())
+        get = client.post(
+            "/research-missions/manage",
+            json={"operation": "GET", "research_mission_id": created.json()["id"]},
+            headers=_headers(include_idempotency=False),
+        )
+    assert replay.status_code == get.status_code == 403
+    assert len(store.commits) == len(repository.items) == 1
+    assert authority.calls == 3
+
+
+def test_mission_without_binding_authority_fails_closed_with_no_effects() -> None:
+    runtime, repository, store = _fixtures()
+    runtime.research_missions._invocation_authority = None
+    with TestClient(create_app(runtime)) as client:
+        response = client.post("/research-missions/manage", json=_create_body(), headers=_headers())
+    assert response.status_code == 503
+    assert not store.commits and not repository.items

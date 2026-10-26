@@ -1,5 +1,6 @@
 """Canonical intelligence.research-mission.manage adapter (P-CAP-04/05)."""
 
+from datetime import UTC, datetime
 from typing import Protocol
 from uuid import UUID
 
@@ -9,6 +10,10 @@ from baobab_pulse.application.intelligence_authority import (
     permits_classification,
 )
 from baobab_pulse.application.ports.authentication import AuthenticatedCaller
+from baobab_pulse.application.ports.capability_invocation import (
+    CapabilityInvocation,
+    CapabilityInvocationAuthority,
+)
 from baobab_pulse.application.ports.context_authority import (
     ContextAccessDeniedError,
     ContextAuthenticationError,
@@ -62,10 +67,12 @@ class ResearchMissionManageCapabilityService:
         context_authority: ContextAuthorityPort,
         repository: DurableResearchMissionRepository,
         mutation_store: ResearchMissionMutationStore,
+        invocation_authority: CapabilityInvocationAuthority | None = None,
     ) -> None:
         self._context_authority = context_authority
         self._repository = repository
         self._mutation_store = mutation_store
+        self._invocation_authority = invocation_authority
 
     async def manage(
         self,
@@ -81,20 +88,31 @@ class ResearchMissionManageCapabilityService:
             required_scope=RESEARCH_MISSION_MANAGE_SCOPE,
         )
         trusted = await self._trusted_context(context_id=context_id, caller=caller)
+        if self._invocation_authority is None:
+            raise CapabilityAuthorityUnavailableError("current binding authority is required")
+        invocation = await self._invocation_authority.authorise(context=trusted, caller=caller)
+        self._unexpired(invocation)
         if isinstance(request, ResearchMissionCreateRequest):
-            return await self._create(
+            result = await self._create(
                 request=request,
                 trusted=trusted,
                 caller=caller,
                 correlation_id=correlation_id,
                 idempotency_key=idempotency_key,
                 clearance=clearance,
+                invocation=invocation,
             )
-        return await self._get(
-            request=request,
-            trusted=trusted,
-            clearance=clearance,
-        )
+        else:
+            result = await self._get(request=request, trusted=trusted, clearance=clearance)
+        self._unexpired(invocation)
+        return result
+
+    @staticmethod
+    def _unexpired(invocation: CapabilityInvocation) -> None:
+        if invocation.expires_at <= datetime.now(UTC):
+            raise CapabilityAccessDeniedError(
+                "capability authority expired before resource execution or delivery"
+            )
 
     async def _create(
         self,
@@ -105,11 +123,10 @@ class ResearchMissionManageCapabilityService:
         correlation_id: UUID,
         idempotency_key: str | None,
         clearance: Classification,
+        invocation: CapabilityInvocation,
     ) -> ResearchMission:
         if idempotency_key is None:
-            raise CapabilityInvalidRequestError(
-                "Idempotency-Key is required for ResearchMission CREATE"
-            )
+            raise CapabilityInvalidRequestError("Idempotency-Key is required for ResearchMission CREATE")
         if request.tenant_scope in (TenantScope.GLOBAL, TenantScope.PLATFORM):
             raise CapabilityAccessDeniedError(
                 "tenant-bound capability invocation cannot create global/platform research missions"
@@ -144,6 +161,7 @@ class ResearchMissionManageCapabilityService:
                 request_fingerprint=create_request_fingerprint(request),
                 request_payload=canonical_create_request_json(request),
                 mission=mission,
+                invocation=invocation,
             )
         )
         return commit.mission
@@ -163,9 +181,7 @@ class ResearchMissionManageCapabilityService:
             clearance,
             mission.classification,
         ):
-            raise ResearchMissionNotFoundError(
-                "research mission is unavailable to this caller"
-            )
+            raise ResearchMissionNotFoundError("research mission is unavailable to this caller")
         return mission
 
     async def _trusted_context(

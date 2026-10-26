@@ -25,7 +25,17 @@ from baobab_pulse.infrastructure.control_plane.context_authority import _validat
 class HttpCapabilityInvocationAuthority:
     """No positive cache, redirects, supplied authority IDs or alternate route."""
 
-    def __init__(self, *, resolution_url: str, provider_id: str, engine_instance_id: str) -> None:
+    def __init__(
+        self,
+        *,
+        resolution_url: str,
+        provider_id: str,
+        engine_instance_id: str,
+        capability_key: str = "intelligence.evidence.search",
+    ) -> None:
+        if capability_key not in {"intelligence.evidence.search", "intelligence.research-mission.manage"}:
+            raise ValueError("canonical Pulse capability required")
+        self._capability = capability_key
         self._url = _validated_http_endpoint(resolution_url, name="resolution_url")
         if not re.fullmatch(r"provider_[0-9a-f]{32}", provider_id):
             raise ValueError("canonical provider_id is required")
@@ -50,7 +60,7 @@ class HttpCapabilityInvocationAuthority:
                     headers={"Authorization": "Bearer " + caller.access_token, "Cache-Control": "no-store"},
                     json={
                         "context_id": str(context.context_id),
-                        "capability_key": "intelligence.evidence.search",
+                        "capability_key": self._capability,
                         "required_contract_version": 1,
                         "correlation_id": correlation,
                     },
@@ -82,7 +92,7 @@ class HttpCapabilityInvocationAuthority:
             expires = datetime.fromisoformat(result["expires_at"].replace("Z", "+00:00"))
             if (
                 result.get("context_id") != str(context.context_id)
-                or result.get("capability_key") != "intelligence.evidence.search"
+                or result.get("capability_key") != self._capability
                 or result.get("correlation_id") != correlation
                 or type(result.get("contract_version")) is not int
                 or result["contract_version"] != 1

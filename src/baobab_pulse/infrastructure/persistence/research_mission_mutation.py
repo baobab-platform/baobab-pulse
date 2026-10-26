@@ -18,6 +18,7 @@ from baobab_pulse.application.ports.research_mission_mutation import (
 from baobab_pulse.contracts.events import PulseEventEnvelope
 from baobab_pulse.domain.research import ResearchMission
 from baobab_pulse.domain.shared.errors import (
+    CapabilityAccessDeniedError,
     IdempotencyConflictError,
     MutationIntegrityError,
     MutationPersistenceUnavailableError,
@@ -27,9 +28,7 @@ from baobab_pulse.infrastructure.persistence.connection import Database
 _CAPABILITY_KEY = "intelligence.research-mission.manage"
 _EVENT_TYPE = "com.baobab-platform.intelligence.research-mission.created.v1"
 _SOURCE = "urn:baobab-platform:service:baobab-pulse"
-_HELD_DATASCHEMA = (
-    "urn:baobab-platform:unregistered-schema:intelligence:research-mission.created:v1"
-)
+_HELD_DATASCHEMA = "urn:baobab-platform:unregistered-schema:intelligence:research-mission.created:v1"
 
 
 class PostgresResearchMissionMutationStore:
@@ -55,6 +54,7 @@ class PostgresResearchMissionMutationStore:
 
         try:
             async with self._database.pool.acquire() as connection, connection.transaction():
+                await self._authority_fence(connection, mutation)
                 idempotency_row = await connection.fetchrow(
                     """
                     INSERT INTO intelligence.research_mission_idempotency (
@@ -97,8 +97,9 @@ class PostgresResearchMissionMutationStore:
                         INSERT INTO intelligence.research_mission_mutation_audit (
                             audit_id, mission_id, tenant_id, actor_subject, actor_client_id,
                             context_id, capability_key, operation, idempotency_key,
-                            request_fingerprint, result_fingerprint, correlation_id, occurred_at
-                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'CREATE', $8, $9, $10, $11, $12)
+                            request_fingerprint, result_fingerprint, correlation_id, occurred_at,
+                            resolution_id, grant_id, binding_id, provider_id, engine_instance_id, authority_expires_at
+                        ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'CREATE', $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
                         """,
                         audit_id,
                         mutation.mission.id,
@@ -112,6 +113,12 @@ class PostgresResearchMissionMutationStore:
                         result_fingerprint,
                         mutation.correlation_id,
                         mutation.mission.created_at,
+                        mutation.invocation.resolution_id,
+                        mutation.invocation.grant_id,
+                        mutation.invocation.binding_id,
+                        mutation.invocation.provider_id,
+                        mutation.invocation.engine_instance_id,
+                        mutation.invocation.expires_at,
                     )
                     await connection.execute(
                         """
@@ -130,6 +137,7 @@ class PostgresResearchMissionMutationStore:
                         mutation.idempotency_key,
                         envelope_fingerprint,
                     )
+                    await self._authority_fence(connection, mutation)
                     return ResearchMissionMutationCommit(
                         mission=mutation.mission,
                         replayed=False,
@@ -192,6 +200,7 @@ class PostgresResearchMissionMutationStore:
                     mutation.idempotency_key,
                     _EVENT_TYPE,
                 )
+                await self._authority_fence(connection, mutation)
         except IdempotencyConflictError:
             raise
         except MutationIntegrityError:
@@ -218,6 +227,15 @@ class PostgresResearchMissionMutationStore:
             outbox_row=outbox_row,
         )
 
+    @staticmethod
+    async def _authority_fence(connection: Any, mutation: ResearchMissionCreateMutation) -> None:
+        # Database wall clock, including lock waits: expired requests roll back
+        # mission, idempotency, audit and outbox together. Replays also recheck.
+        if not await connection.fetchval(
+            "SELECT clock_timestamp() < $1::timestamptz", mutation.invocation.expires_at
+        ):
+            raise CapabilityAccessDeniedError("capability authority expired at native transaction fence")
+
     def _validate_replay(
         self,
         *,
@@ -228,9 +246,7 @@ class PostgresResearchMissionMutationStore:
         outbox_row: Mapping[str, Any] | None,
     ) -> ResearchMissionMutationCommit:
         if str(idempotency_row["request_fingerprint"]) != mutation.request_fingerprint:
-            raise IdempotencyConflictError(
-                "Idempotency-Key is already bound to a different CREATE request"
-            )
+            raise IdempotencyConflictError("Idempotency-Key is already bound to a different CREATE request")
         stored_request_payload = self._json_object(idempotency_row["request_payload"])
         if self._sha256(self._canonical_json(stored_request_payload)) != mutation.request_fingerprint:
             raise MutationIntegrityError(
@@ -247,9 +263,7 @@ class PostgresResearchMissionMutationStore:
 
         mission_json = self._canonical_json(mission.model_dump(mode="json"))
         if self._sha256(mission_json) != str(idempotency_row["result_fingerprint"]):
-            raise MutationIntegrityError(
-                "persisted ResearchMission result does not match its fingerprint"
-            )
+            raise MutationIntegrityError("persisted ResearchMission result does not match its fingerprint")
         if mission.id != str(idempotency_row["mission_id"]):
             raise MutationIntegrityError(
                 "persisted idempotency mission identity diverges from canonical payload"
@@ -257,9 +271,7 @@ class PostgresResearchMissionMutationStore:
 
         publication_status = str(outbox_row["publication_status"])
         if publication_status != "HELD_UNREGISTERED":
-            raise MutationIntegrityError(
-                "unregistered Intelligence event candidate is not HELD_UNREGISTERED"
-            )
+            raise MutationIntegrityError("unregistered Intelligence event candidate is not HELD_UNREGISTERED")
         envelope = self._validate_envelope(
             outbox_row["envelope"],
             expected_tenant_id=mutation.tenant_id,
@@ -267,9 +279,7 @@ class PostgresResearchMissionMutationStore:
             expected_idempotency_key=mutation.idempotency_key,
         )
         if self._envelope_fingerprint(envelope) != str(outbox_row["envelope_fingerprint"]):
-            raise MutationIntegrityError(
-                "persisted held event candidate does not match its fingerprint"
-            )
+            raise MutationIntegrityError("persisted held event candidate does not match its fingerprint")
 
         return ResearchMissionMutationCommit(
             mission=mission,
@@ -331,17 +341,12 @@ class PostgresResearchMissionMutationStore:
 
     @classmethod
     def _envelope_fingerprint(cls, envelope: PulseEventEnvelope) -> str:
-        canonical = cls._canonical_json(
-            envelope.model_dump(mode="json", exclude_none=True)
-        )
+        canonical = cls._canonical_json(envelope.model_dump(mode="json", exclude_none=True))
         return cls._sha256(canonical)
 
     @staticmethod
     def _stable_uuid(kind: str, mutation: ResearchMissionCreateMutation) -> UUID:
-        scope = (
-            f"{_SOURCE}|{kind}|{mutation.tenant_id}|{mutation.actor_subject}|"
-            f"{mutation.idempotency_key}"
-        )
+        scope = f"{_SOURCE}|{kind}|{mutation.tenant_id}|{mutation.actor_subject}|{mutation.idempotency_key}"
         return uuid5(NAMESPACE_URL, scope)
 
     @staticmethod

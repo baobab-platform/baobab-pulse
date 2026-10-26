@@ -18,6 +18,9 @@ _CLIENT = httpx.AsyncClient
 
 
 @pytest.mark.parametrize(
+    "capability", ["intelligence.evidence.search", "intelligence.research-mission.manage"]
+)
+@pytest.mark.parametrize(
     "mutation",
     [
         "current",
@@ -38,7 +41,7 @@ _CLIENT = httpx.AsyncClient
     ],
 )
 async def test_every_invocation_requires_a_fresh_matching_resolution(
-    monkeypatch: pytest.MonkeyPatch, mutation: str
+    monkeypatch: pytest.MonkeyPatch, mutation: str, capability: str
 ) -> None:
     calls = []
 
@@ -49,7 +52,7 @@ async def test_every_invocation_requires_a_fresh_matching_resolution(
         response = {
             "resolution_id": "res_" + "1" * 32,
             "context_id": body["context_id"],
-            "capability_key": "intelligence.evidence.search",
+            "capability_key": capability,
             "correlation_id": body["correlation_id"],
             "decision": "RESOLVED",
             "contract_version": 1,
@@ -99,6 +102,7 @@ async def test_every_invocation_requires_a_fresh_matching_resolution(
         resolution_url="https://cp.example.test/v1/capabilities/resolve",
         provider_id="provider_" + "4" * 32,
         engine_instance_id="ei_" + "5" * 32,
+        capability_key=capability,
     )
     if mutation == "current":
         await authority.authorise(context=_CONTEXT, caller=_CALLER)
