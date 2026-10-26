@@ -32,16 +32,18 @@ every other application service in this codebase.
 from __future__ import annotations
 
 from collections.abc import Sequence
+from datetime import UTC, datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from baobab_pulse.application.intelligence_authority import permits_classification
 from baobab_pulse.application.ports.repositories import EvidenceSetHydrationPort
 from baobab_pulse.application.ports.semantic_retrieval_port import (
     EvidenceRetrievalQuery,
     SemanticRetrievalPort,
 )
 from baobab_pulse.domain.evidence import EvidenceSet
-from baobab_pulse.domain.shared.enums import Classification
+from baobab_pulse.domain.shared.enums import Classification, TenantScope
 from baobab_pulse.domain.shared.errors import InvariantViolation
 from baobab_pulse.tenancy.context import require_tenant_context
 
@@ -86,31 +88,34 @@ class EvidenceRetrievalService:
         )
         raw_candidates = await self._semantic_retrieval.retrieve_evidence(query)
 
-        current_versions: dict[str, int | None] = {}
+        canonical: dict[str, tuple[EvidenceSet, dict[str,str]] | None] = {}
         results: list[HydratedEvidenceCandidate] = []
+        now=datetime.now(UTC)
         for candidate in raw_candidates:
-            if candidate.evidence_set_id not in current_versions:
-                current_versions[candidate.evidence_set_id] = await self._hydration.current_version(
-                    candidate.evidence_set_id
-                )
-            current_version = current_versions[candidate.evidence_set_id]
-            if current_version is None:
-                # The canonical source no longer exists in PostgreSQL at
-                # all (deleted/retired) — the Qdrant point is orphaned and
-                # must never be treated as evidence of anything.
+            if evidence_set_id is not None and candidate.evidence_set_id != evidence_set_id:
                 continue
-            results.append(
-                HydratedEvidenceCandidate(
-                    canonical_object_id=candidate.canonical_object_id,
-                    evidence_set_id=candidate.evidence_set_id,
-                    score=candidate.score,
-                    is_stale=candidate.canonical_version < current_version,
-                )
-            )
+            if candidate.evidence_set_id not in canonical:
+                canonical[candidate.evidence_set_id]=await self._hydration.get_with_text(candidate.evidence_set_id)
+            hydrated=canonical[candidate.evidence_set_id]
+            if hydrated is None:
+                continue
+            source,text=hydrated
+            if source.id!=candidate.evidence_set_id:
+                continue
+            # Qdrant metadata can be stale or wrong. PostgreSQL remains the
+            # authority for tenant, context, classification and entry identity.
+            if source.tenant_scope not in {TenantScope.TENANT,TenantScope.CONTEXT} or source.tenant_context is None or source.tenant_context.tenant_id != tenant_context.tenant_id or not permits_classification(requester_clearance,source.classification):
+                continue
+            if source.tenant_scope==TenantScope.CONTEXT and (not tenant_context.context_id or source.tenant_context.context_id!=tenant_context.context_id):
+                continue
+            entry=next((entry for entry in source.entries if entry.id==candidate.canonical_object_id),None)
+            if entry is None or entry.id not in text or entry.valid_from is not None and entry.valid_from>now or entry.valid_to is not None and entry.valid_to<=now:
+                continue
+            results.append(HydratedEvidenceCandidate(canonical_object_id=candidate.canonical_object_id,evidence_set_id=source.id,score=candidate.score,is_stale=candidate.canonical_version!=source.version))
         return tuple(results)
 
     async def hydrate_for_pipeline(
-        self, candidates: Sequence[HydratedEvidenceCandidate]
+        self, candidates: Sequence[HydratedEvidenceCandidate], *, requester_clearance:Classification=Classification.TENANT
     ) -> tuple[EvidenceSet, dict[str, str]]:
         """Turn authorised, fresh candidates into the ``(EvidenceSet,
         evidence_text)`` pair the existing, unchanged
@@ -142,8 +147,18 @@ class EvidenceRetrievalService:
         if hydrated is None:
             raise InvariantViolation(f"EvidenceSet {evidence_set_id!r} no longer exists canonically")
         evidence_set, full_text = hydrated
+        tenant=require_tenant_context()
+        if evidence_set.tenant_scope not in {TenantScope.TENANT,TenantScope.CONTEXT} or evidence_set.tenant_context is None or evidence_set.tenant_context.tenant_id!=tenant.tenant_id or not permits_classification(requester_clearance,evidence_set.classification):
+            raise InvariantViolation("canonical evidence is unavailable to this tenant/clearance")
+        if evidence_set.tenant_scope==TenantScope.CONTEXT and (not tenant.context_id or evidence_set.tenant_context.context_id!=tenant.context_id):
+            raise InvariantViolation("canonical evidence is unavailable in this context")
 
         matched_ids = {candidate.canonical_object_id for candidate in fresh}
+        now=datetime.now(UTC)
+        current_ids={entry.id for entry in evidence_set.entries if (entry.valid_from is None or entry.valid_from<=now) and (entry.valid_to is None or entry.valid_to>now)}
+        matched_ids &= current_ids
+        if not matched_ids:
+            raise InvariantViolation("matched evidence no longer exists or is outside its validity period")
         narrowed_text = {
             evidence_id: text for evidence_id, text in full_text.items() if evidence_id in matched_ids
         }

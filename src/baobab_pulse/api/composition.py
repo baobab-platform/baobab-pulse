@@ -121,6 +121,12 @@ def build_capability_runtime(
         context_authority=context_authority,
         repository=get_research_mission_repository(),
         mutation_store=get_research_mission_mutation_store(),
+        invocation_authority=HttpCapabilityInvocationAuthority(
+            resolution_url=actual.control_plane_capability_resolution_url or "",
+            provider_id=actual.capability_provider_id or "",
+            engine_instance_id=actual.engine_instance_id or "",
+            capability_key="intelligence.research-mission.manage",
+        ),
     )
     return CapabilityApiRuntime(
         authenticator=authenticator,

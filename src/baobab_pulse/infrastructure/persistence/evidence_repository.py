@@ -17,7 +17,10 @@ from __future__ import annotations
 
 import json
 
+import asyncpg
+
 from baobab_pulse.domain.evidence import EvidenceSet
+from baobab_pulse.domain.shared.errors import SemanticRetrievalUnavailable
 from baobab_pulse.infrastructure.persistence.connection import Database
 
 
@@ -37,9 +40,12 @@ class PostgresEvidenceSetRepository:
         return hydrated[0] if hydrated is not None else None
 
     async def get_with_text(self, entity_id: str) -> tuple[EvidenceSet, dict[str, str]] | None:
-        record = await self._database.pool.fetchrow(
-            "SELECT payload, evidence_text FROM evidence.evidence_sets WHERE id = $1", entity_id
-        )
+        try:
+            record = await self._database.pool.fetchrow(
+                "SELECT payload, evidence_text FROM evidence.evidence_sets WHERE id = $1", entity_id
+            )
+        except (asyncpg.PostgresError,asyncpg.InterfaceError,OSError) as error:
+            raise SemanticRetrievalUnavailable("canonical evidence store unavailable") from error
         if record is None:
             return None
         evidence_set = EvidenceSet.model_validate(json.loads(record["payload"]))

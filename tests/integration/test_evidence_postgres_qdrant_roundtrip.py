@@ -134,7 +134,8 @@ async def test_canonical_write_project_search_and_hydrate_round_trip() -> None:
         assert results[0].canonical_object_id == "evd_e123"
         assert results[0].is_stale is False
 
-        hydrated_set, hydrated_text = await service.hydrate_for_pipeline(results)
+        with bind_tenant_context(TenantContext(tenant_id="tn_t1")):
+            hydrated_set, hydrated_text = await service.hydrate_for_pipeline(results,requester_clearance=Classification.CONFIDENTIAL)
         assert hydrated_set.id == evidence_set.id
         assert hydrated_set.version == 7
         assert hydrated_text == {"evd_e123": content}

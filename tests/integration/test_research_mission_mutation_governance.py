@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import asyncpg
 import pytest
 
+from baobab_pulse.application.ports.capability_invocation import CapabilityInvocation
 from baobab_pulse.application.ports.research_mission_mutation import (
     ResearchMissionCreateMutation,
 )
@@ -44,7 +46,7 @@ async def _database() -> Database | None:
     database = Database(Settings().database_url)
     try:
         await database.connect()
-    except (OSError, asyncpg.PostgresError):
+    except (OSError, asyncpg.PostgresError):  # fmt: skip -- Foundation still syntax-checks with Python 3.13
         return None
     if not await database.is_ready():
         await database.disconnect()
@@ -88,6 +90,14 @@ def _mutation(index: int, request: ResearchMissionCreateRequest) -> ResearchMiss
         confidence_requirement=request.confidence_requirement,
     )
     return ResearchMissionCreateMutation(
+        invocation=CapabilityInvocation(
+            "res_" + "1" * 32,
+            "grant_" + "2" * 32,
+            "bind_" + "3" * 32,
+            "provider_" + "4" * 32,
+            "ei_" + "5" * 32,
+            datetime.now(UTC) + timedelta(seconds=30),
+        ),
         tenant_id=_TENANT_ID,
         actor_subject=_ACTOR,
         actor_client_id=_CLIENT_ID,
@@ -159,14 +169,18 @@ async def test_concurrent_duplicate_create_converges_on_one_atomic_mutation() ->
                 SELECT count(*) FROM intelligence.research_mission_idempotency
                 WHERE tenant_id = $1 AND actor_subject = $2 AND idempotency_key = $3
                 """,
-                _TENANT_ID, _ACTOR, _idempotency_value(),
+                _TENANT_ID,
+                _ACTOR,
+                _idempotency_value(),
             ),
             "audit": await database.pool.fetchval(
                 """
                 SELECT count(*) FROM intelligence.research_mission_mutation_audit
                 WHERE tenant_id = $1 AND actor_subject = $2 AND idempotency_key = $3
                 """,
-                _TENANT_ID, _ACTOR, _idempotency_value(),
+                _TENANT_ID,
+                _ACTOR,
+                _idempotency_value(),
             ),
             "outbox": await database.pool.fetchval(
                 """
@@ -174,7 +188,10 @@ async def test_concurrent_duplicate_create_converges_on_one_atomic_mutation() ->
                 WHERE tenant_id = $1 AND actor_subject = $2
                   AND idempotency_key = $3 AND event_type = $4
                 """,
-                _TENANT_ID, _ACTOR, _idempotency_value(), _EVENT_TYPE,
+                _TENANT_ID,
+                _ACTOR,
+                _idempotency_value(),
+                _EVENT_TYPE,
             ),
         }
         assert counts == {"missions": 1, "idempotency": 1, "audit": 1, "outbox": 1}
@@ -186,7 +203,9 @@ async def test_concurrent_duplicate_create_converges_on_one_atomic_mutation() ->
             FROM intelligence.research_mission_mutation_audit
             WHERE tenant_id = $1 AND actor_subject = $2 AND idempotency_key = $3
             """,
-            _TENANT_ID, _ACTOR, _idempotency_value(),
+            _TENANT_ID,
+            _ACTOR,
+            _idempotency_value(),
         )
         assert audit is not None
         assert audit["actor_subject"] == _ACTOR
@@ -201,7 +220,10 @@ async def test_concurrent_duplicate_create_converges_on_one_atomic_mutation() ->
             WHERE tenant_id = $1 AND actor_subject = $2
               AND idempotency_key = $3 AND event_type = $4
             """,
-            _TENANT_ID, _ACTOR, _idempotency_value(), _EVENT_TYPE,
+            _TENANT_ID,
+            _ACTOR,
+            _idempotency_value(),
+            _EVENT_TYPE,
         )
         assert outbox is not None
         assert outbox["publication_status"] == "HELD_UNREGISTERED"
@@ -220,15 +242,56 @@ async def test_concurrent_duplicate_create_converges_on_one_atomic_mutation() ->
         with pytest.raises(IdempotencyConflictError):
             await store.commit_create(_mutation(99, _request(title="different request")))
 
-        assert await database.pool.fetchval(
-            """
+        assert (
+            await database.pool.fetchval(
+                """
             SELECT count(*) FROM intelligence.research_missions
             WHERE tenant_id = $1
               AND payload->>'title' = $2
             """,
+                _TENANT_ID,
+                request.title,
+            )
+            == 1
+        )
+    finally:
+        await _cleanup(database)
+        await database.disconnect()
+
+
+async def test_expired_authority_cannot_create_or_replay_a_native_mutation() -> None:
+    from dataclasses import replace
+
+    from baobab_pulse.domain.shared.errors import CapabilityAccessDeniedError
+
+    database = await _database()
+    if database is None:
+        pytest.skip("PostgreSQL integration database unavailable")
+    try:
+        await _cleanup(database)
+        store = PostgresResearchMissionMutationStore(database)
+        mutation = _mutation(991, _request())
+        expired = replace(
+            mutation,
+            invocation=replace(mutation.invocation, expires_at=datetime.now(UTC) - timedelta(seconds=1)),
+        )
+        with pytest.raises(CapabilityAccessDeniedError):
+            await store.commit_create(expired)
+        assert (
+            await database.pool.fetchval(
+                "SELECT count(*) FROM intelligence.research_missions WHERE tenant_id=$1", _TENANT_ID
+            )
+            == 0
+        )
+        await store.commit_create(mutation)
+        with pytest.raises(CapabilityAccessDeniedError):
+            await store.commit_create(expired)
+        audit = await database.pool.fetchrow(
+            "SELECT resolution_id, binding_id FROM intelligence.research_mission_mutation_audit WHERE tenant_id=$1",
             _TENANT_ID,
-            request.title,
-        ) == 1
+        )
+        assert audit["resolution_id"] == mutation.invocation.resolution_id
+        assert audit["binding_id"] == mutation.invocation.binding_id
     finally:
         await _cleanup(database)
         await database.disconnect()

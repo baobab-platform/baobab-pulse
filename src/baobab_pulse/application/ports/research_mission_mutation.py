@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 from uuid import UUID
 
+from baobab_pulse.application.ports.capability_invocation import CapabilityInvocation
 from baobab_pulse.domain.research import ResearchMission
 
 
@@ -22,6 +23,7 @@ class ResearchMissionCreateMutation:
     request_fingerprint: str
     request_payload: str
     mission: ResearchMission
+    invocation: CapabilityInvocation
 
 
 @dataclass(frozen=True, slots=True)
