@@ -234,12 +234,17 @@ def connected(phase: str) -> dict:
         code, _ = search()
         if phase == "restored":
             check(code == 200)
+            check(mission(create,"dev15-mission-"+custody["run"]["id"])[0]==200)
         elif phase == "unavailable":
             check(code == 503)
+            if not custody.get("fault_phase","").endswith("-qdrant"):
+                check(mission(create,"dev15-outage-"+uuid.uuid4().hex)[0]==503)
         else:
             check(code in (403, 404))
             check(mission(create, "dev15-denied-"+uuid.uuid4().hex)[0] in (403, 404))
             check(asyncio.run(native())["effects"] == before["effects"])
+        if phase=="restored" and custody.get("fault_phase","").endswith("-qdrant"):
+            return {"observed":True,"case_updates":{"PULSE-QDRANT-OUTAGE-RECOVERY":{"result":"PASS","reason":"OBSERVED"}}}
         return {"observed": True}
     check(phase == "test")
 
@@ -256,7 +261,7 @@ def connected(phase: str) -> dict:
     observe("PULSE-CANONICAL-SEARCH", canonical)
 
     def mission_lifecycle():
-        key = "dev15-mission-"+uuid.uuid4().hex
+        key = "dev15-mission-"+custody["run"]["id"]
         code, created = mission(create, key)
         check(code == 200)
         cid = created["id"]
@@ -286,7 +291,7 @@ def connected(phase: str) -> dict:
 
     def security():
         before = asyncio.run(native())["effects"]
-        for name, statuses in (("revoked", (401,)), ("expired", (401,)), ("wrong_audience", (401,)), ("missing_scope", (403,))):
+        for name, statuses in (("revoked", (401,)), ("untrusted_issuer", (401,)), ("expired", (401,)), ("wrong_audience", (401,)), ("missing_scope", (403,))):
             check(search(token=custody["security_tokens"][name])[0] in statuses)
             check(mission(create, "dev15-invalid-"+uuid.uuid4().hex, token=custody["security_tokens"][name])[0] in statuses)
         check(asyncio.run(native())["effects"] == before)

@@ -100,6 +100,8 @@ class EvidenceRetrievalService:
             if hydrated is None:
                 continue
             source,text=hydrated
+            if source.id!=candidate.evidence_set_id:
+                continue
             # Qdrant metadata can be stale or wrong. PostgreSQL remains the
             # authority for tenant, context, classification and entry identity.
             if source.tenant_scope not in {TenantScope.TENANT,TenantScope.CONTEXT} or source.tenant_context is None or source.tenant_context.tenant_id != tenant_context.tenant_id or not permits_classification(requester_clearance,source.classification):
@@ -152,6 +154,11 @@ class EvidenceRetrievalService:
             raise InvariantViolation("canonical evidence is unavailable in this context")
 
         matched_ids = {candidate.canonical_object_id for candidate in fresh}
+        now=datetime.now(UTC)
+        current_ids={entry.id for entry in evidence_set.entries if (entry.valid_from is None or entry.valid_from<=now) and (entry.valid_to is None or entry.valid_to>now)}
+        matched_ids &= current_ids
+        if not matched_ids:
+            raise InvariantViolation("matched evidence no longer exists or is outside its validity period")
         narrowed_text = {
             evidence_id: text for evidence_id, text in full_text.items() if evidence_id in matched_ids
         }
