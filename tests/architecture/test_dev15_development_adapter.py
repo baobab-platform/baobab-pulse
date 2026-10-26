@@ -1,9 +1,10 @@
 """DEV-15 adapter remains strictly owner-only until connected runtime proof."""
 from __future__ import annotations
+
 import importlib.util
+import unittest
 from pathlib import Path
 from unittest.mock import patch
-import unittest
 
 PATH = Path(__file__).resolve().parents[2] / ".baobab" / "development_adapter.py"
 SPEC = importlib.util.spec_from_file_location("pulse_dev15", PATH)
@@ -26,9 +27,8 @@ class Dev15AdapterTests(unittest.TestCase):
         self.assertFalse(ADAPTER.observe_ready("https://example.com/readyz"))
 
     def test_missing_disposable_db_never_runs_migrations(self):
-        with patch.dict("os.environ", {}, clear=True):
-            with patch.object(ADAPTER.subprocess, "run") as proc:
-                status, row = ADAPTER.run("migrate")
+        with patch.dict("os.environ", {}, clear=True), patch.object(ADAPTER.subprocess, "run") as proc:
+            status, row = ADAPTER.run("migrate")
         proc.assert_not_called()
         self.assertEqual(status, 2)
         self.assertEqual(row["result"], "BLOCKED")
