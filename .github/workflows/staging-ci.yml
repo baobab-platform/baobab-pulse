@@ -68,7 +68,7 @@ jobs:
       packages: write
       attestations: write
       id-token: write
-    uses: baobab-platform/shared/.github/workflows/reusable-staging-image.yml@eb5449b4abf7a02f3b3e34b1572f456647ba3a6e
+    uses: baobab-platform/shared/.github/workflows/reusable-staging-image.yml@b9f497f247f1c19be9b02a0d5eedd538daf9d84b
     with:
       dockerfile: Dockerfile
       image: ghcr.io/baobab-platform/baobab-pulse
