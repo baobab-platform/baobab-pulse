@@ -112,12 +112,7 @@ def _authenticator() -> OidcJwksWorkloadAuthenticator:
 
 async def test_oidc_authenticator_verifies_canonical_workload_claims() -> None:
     caller = await _authenticator().authenticate(
-        _token(
-            scope=(
-                "intelligence:evidence:search "
-                "intelligence:restricted"
-            )
-        )
+        _token(scope=("intelligence:evidence:search intelligence:restricted"))
     )
 
     assert caller.subject == "service-account-caller"
@@ -193,7 +188,6 @@ async def test_validator_token_provider_caches_short_lived_token(
     assert fields["audience"] == ["baobab-control-plane"]
     assert fields["scope"] == ["context:validate"]
     assert fields["client_id"] == ["baobab-pulse-workload"]
-
 
 
 async def test_context_authority_sends_actual_subject_token_only_in_post_body(
@@ -306,18 +300,20 @@ def test_production_composition_fails_closed_without_authority_configuration() -
         "iam_jwks_url",
         "iam_token_url",
         "control_plane_context_validation_url",
+        "control_plane_capability_resolution_url",
     ],
 )
 def test_production_composition_rejects_plain_http_authorities(field: str) -> None:
     values: dict[str, object] = {
         "environment": Environment.PRODUCTION,
+        "control_plane_capability_resolution_url": "https://cp.example.test/v1/capabilities/resolve",
+        "capability_provider_id": "provider_" + "1" * 32,
+        "engine_instance_id": "ei_" + "2" * 32,
         "iam_issuer_url": _ISSUER,
         "iam_jwks_url": "https://iam.example.test/jwks",
         "iam_token_url": "https://iam.example.test/token",
         "iam_client_secret": "test-secret",
-        "control_plane_context_validation_url": (
-            "https://cp.example.test/v1/platform-context/validate"
-        ),
+        "control_plane_context_validation_url": ("https://cp.example.test/v1/platform-context/validate"),
     }
     values[field] = "http://authority.example.test/insecure"
     settings = Settings(_env_file=None, **values)
@@ -332,13 +328,14 @@ def test_production_composition_builds_real_authority_adapters(
     settings = Settings(
         _env_file=None,
         environment=Environment.PRODUCTION,
+        control_plane_capability_resolution_url="https://cp.example.test/v1/capabilities/resolve",
+        capability_provider_id="provider_" + "1" * 32,
+        engine_instance_id="ei_" + "2" * 32,
         iam_issuer_url=_ISSUER,
         iam_jwks_url="https://iam.example.test/jwks",
         iam_token_url="https://iam.example.test/token",
         iam_client_secret="test-secret",
-        control_plane_context_validation_url=(
-            "https://cp.example.test/v1/platform-context/validate"
-        ),
+        control_plane_context_validation_url=("https://cp.example.test/v1/platform-context/validate"),
     )
     monkeypatch.setattr(composition, "get_evidence_retrieval_service", object)
     monkeypatch.setattr(composition, "get_research_mission_repository", object)

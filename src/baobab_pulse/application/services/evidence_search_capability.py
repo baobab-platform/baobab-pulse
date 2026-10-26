@@ -1,5 +1,6 @@
 """Canonical intelligence.evidence.search application adapter (P-CAP-03)."""
 
+from datetime import UTC, datetime
 from uuid import UUID
 
 from baobab_pulse.application.intelligence_authority import (
@@ -7,6 +8,10 @@ from baobab_pulse.application.intelligence_authority import (
     classification_clearance,
 )
 from baobab_pulse.application.ports.authentication import AuthenticatedCaller
+from baobab_pulse.application.ports.capability_invocation import (
+    CapabilityInvocationAuthority,
+    EvidenceReadAudit,
+)
 from baobab_pulse.application.ports.context_authority import (
     ContextAccessDeniedError,
     ContextAuthenticationError,
@@ -36,9 +41,13 @@ class EvidenceSearchCapabilityService:
         *,
         context_authority: ContextAuthorityPort,
         retrieval: EvidenceRetrievalService,
+        invocation_authority: CapabilityInvocationAuthority | None = None,
+        read_audit: EvidenceReadAudit | None = None,
     ) -> None:
         self._context_authority = context_authority
         self._retrieval = retrieval
+        self._invocation_authority = invocation_authority
+        self._read_audit = read_audit
 
     async def search(
         self,
@@ -75,18 +84,37 @@ class EvidenceSearchCapabilityService:
                 "Control Plane context validation is unavailable"
             ) from exc
 
+        if self._invocation_authority is None or self._read_audit is None:
+            raise CapabilityAuthorityUnavailableError(
+                "current binding authority and durable audit are required"
+            )
+        invocation = await self._invocation_authority.authorise(context=trusted, caller=caller)
+
         tenant_context = TenantContext(
             tenant_id=trusted.tenant_id,
             context_id=str(trusted.context_id),
             organisation_id=trusted.organisation_id,
         )
         with bind_tenant_context(tenant_context):
-            return await self._retrieval.search(
+            candidates = await self._retrieval.search(
                 query_text,
                 requester_clearance=clearance,
                 evidence_set_id=evidence_set_id,
                 top_k=top_k,
             )
+
+        if invocation.expires_at <= datetime.now(UTC):
+            raise CapabilityAccessDeniedError("capability authority expired during resource read")
+        await self._read_audit.record(
+            context=trusted,
+            caller=caller,
+            invocation=invocation,
+            evidence_set_id=evidence_set_id,
+            result_count=len(candidates),
+        )
+        if invocation.expires_at <= datetime.now(UTC):
+            raise CapabilityAccessDeniedError("capability authority expired before resource delivery")
+        return candidates
 
 
 __all__ = ["EvidenceSearchCapabilityService"]

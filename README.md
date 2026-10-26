@@ -362,3 +362,5 @@ Pulse abilities deserve canonical Shared capability keys.
 ## Contributing
 
 See `CONTRIBUTING.md`.
+
+Current evidence-search deployments also require [normal CP binding and durable resource-read audit](docs/development/dev06-bound-resource.md). The old context-only direct-component path is not an entitlement.
