@@ -46,7 +46,7 @@ async def _database() -> Database | None:
     database = Database(Settings().database_url)
     try:
         await database.connect()
-    except OSError, asyncpg.PostgresError:
+    except (OSError, asyncpg.PostgresError):  # fmt: skip -- Foundation still syntax-checks with Python 3.13
         return None
     if not await database.is_ready():
         await database.disconnect()
