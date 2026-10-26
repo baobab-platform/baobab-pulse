@@ -10,7 +10,7 @@
 # release tag, never `latest`/`edge` (required by
 # .github/workflows/foundation.yml's reproducibility check).
 
-FROM python:3.14.7-alpine3.23 AS builder
+FROM python:3.15.0-alpine3.23 AS builder
 
 # Pinned to the exact uv release used to generate uv.lock in this repo.
 COPY --from=ghcr.io/astral-sh/uv:0.8.17 /uv /uvx /bin/
@@ -34,7 +34,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     && uv pip uninstall --python /app/.venv setuptools wheel \
     && find /app/.venv -type d \( -name 'msgpack-1.1.2.dist-info' -o -name 'setuptools-70.3.0.dist-info' \) -prune -exec rm -rf '{}' +
 
-FROM python:3.14.7-alpine3.23 AS runtime
+FROM python:3.15.0-alpine3.23 AS runtime
 ARG VERSION=0.0.0-dev
 ARG REVISION=unknown
 LABEL org.opencontainers.image.source="https://github.com/baobab-platform/baobab-pulse" \
