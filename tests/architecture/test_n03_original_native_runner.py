@@ -5,9 +5,9 @@ import hashlib
 import importlib.util
 import json
 import os
-from pathlib import Path
 import stat
 import tempfile
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
