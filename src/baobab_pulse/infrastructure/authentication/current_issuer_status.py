@@ -12,7 +12,6 @@ import asyncio
 import base64
 import json
 import time
-import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Mapping
@@ -103,8 +102,7 @@ class CurrentIssuerStatusWorkloadAuthenticator:
             raise WorkloadAuthenticationError("issuer-signed client binding missing")
         try:
             status = await asyncio.to_thread(self._status, access_token)
-        except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError,
-                ValueError) as exc:
+        except (OSError, ValueError) as exc:
             raise WorkloadAuthenticationUnavailableError(
                 "issuer current-status observation unavailable"
             ) from exc
