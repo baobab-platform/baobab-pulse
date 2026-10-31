@@ -48,3 +48,18 @@ def test_incomplete_dev_issuer_status_configuration_fails_closed() -> None:
             iam_introspection_url="https://iam.example.invalid/oauth2/introspect",
             iam_introspection_client_id="pulse-introspection-observer",
         ))
+
+
+def test_connected_development_requires_real_native_issuer_status() -> None:
+    with pytest.raises(RuntimeError, match="N03 current issuer-status admission unavailable"):
+        build_capability_runtime(configured(
+            Environment.DEVELOPMENT, iam_native_n03_required=True,
+        ))
+
+
+def test_candidate_dev_does_not_silently_upgrade_provider_status() -> None:
+    # The opt-in switch is a runtime denial fence, not an IAM registration,
+    # a CP Context grant or a provider support promotion.
+    settings = configured(Environment.DEVELOPMENT, iam_native_n03_required=True)
+    assert settings.iam_native_n03_required is True
+    assert settings.iam_introspection_client_id is None
