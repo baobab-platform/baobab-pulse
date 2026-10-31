@@ -54,6 +54,19 @@ def build_capability_runtime(
     }
     present = {name for name, value in required.items() if value}
     if not present:
+        # A connected N03 development worker may never silently become an
+        # unprotected local component simply because ALL authority settings
+        # disappeared. A partially configured status observer is likewise an
+        # explicit admission attempt, not permission to disable the PEP.
+        if actual.iam_native_n03_required or any((
+            actual.iam_introspection_url,
+            actual.iam_introspection_client_id,
+            actual.iam_introspection_client_secret,
+        )):
+            raise RuntimeError(
+                "N03 current issuer-status admission unavailable: "
+                "canonical IAM/CP authority configuration missing"
+            )
         if actual.environment in {Environment.STAGING, Environment.PRODUCTION}:
             raise RuntimeError(
                 "protected Pulse requires IAM/JWKS/token and Control Plane "
