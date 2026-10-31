@@ -59,8 +59,12 @@ class CurrentIssuerStatusWorkloadAuthenticator:
         allow_development_loopback_http: bool = False,
     ) -> None:
         url = urllib.parse.urlsplit(introspection_url)
+        expected = urllib.parse.urlsplit(issuer)
         if (
             not issuer or not audience
+            or not expected.hostname or expected.username is not None
+            or expected.password is not None or expected.query or expected.fragment
+            or (url.scheme, url.netloc) != (expected.scheme, expected.netloc)
             or not introspection_client_id or not introspection_client_secret
             or len(introspection_client_secret) < 32
             or url.username is not None or url.password is not None
