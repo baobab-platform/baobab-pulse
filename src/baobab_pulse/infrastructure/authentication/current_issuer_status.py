@@ -16,6 +16,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Mapping
+from typing import cast
 
 from baobab_pulse.application.ports.authentication import (
     AuthenticatedCaller,
@@ -26,7 +27,7 @@ from baobab_pulse.application.ports.authentication import (
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(self, request, fp, code, msg, headers, newurl):
+    def redirect_request(\n        self, request: urllib.request.Request, fp: object, code: int,\n        msg: str, headers: object, newurl: str,\n    ) -> None:
         return None
 
 
@@ -103,7 +104,7 @@ class CurrentIssuerStatusWorkloadAuthenticator:
         try:
             status = await asyncio.to_thread(self._status, access_token)
         except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError,
-                ValueError, json.JSONDecodeError) as exc:
+                ValueError) as exc:
             raise WorkloadAuthenticationUnavailableError(
                 "issuer current-status observation unavailable"
             ) from exc
@@ -153,7 +154,7 @@ class CurrentIssuerStatusWorkloadAuthenticator:
         data = json.loads(raw, object_pairs_hook=_no_duplicate_fields)
         if not isinstance(data, dict):
             raise ValueError("issuer status is not a JSON object")
-        return data
+        return cast(Mapping[str, object], data)
 
 
 __all__ = ["CurrentIssuerStatusWorkloadAuthenticator"]
