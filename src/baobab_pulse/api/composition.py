@@ -112,7 +112,7 @@ def build_capability_runtime(
     }
     status_configured = any(status_parts.values())
     protected = actual.environment in {Environment.STAGING, Environment.PRODUCTION}
-    if protected or status_configured:
+    if protected or actual.iam_native_n03_required or status_configured:
         missing_status = sorted(name for name, value in status_parts.items() if not value)
         if missing_status:
             raise RuntimeError(
