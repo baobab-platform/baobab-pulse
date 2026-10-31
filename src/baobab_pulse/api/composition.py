@@ -54,9 +54,9 @@ def build_capability_runtime(
     }
     present = {name for name, value in required.items() if value}
     if not present:
-        if actual.environment == Environment.PRODUCTION:
+        if actual.environment in {Environment.STAGING, Environment.PRODUCTION}:
             raise RuntimeError(
-                "production Pulse requires IAM/JWKS/token and Control Plane "
+                "protected Pulse requires IAM/JWKS/token and Control Plane "
                 "context-validation authority configuration"
             )
         return None
