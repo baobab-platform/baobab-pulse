@@ -22,6 +22,10 @@ from baobab_pulse.configuration.settings import Environment, Settings
 from baobab_pulse.infrastructure.authentication.oidc_jwks import (
     OidcJwksWorkloadAuthenticator,
 )
+from baobab_pulse.infrastructure.authentication.current_issuer_status import (
+    CurrentIssuerStatusWorkloadAuthenticator,
+)
+from baobab_pulse.application.ports.authentication import WorkloadAuthenticatorPort
 from baobab_pulse.infrastructure.control_plane.capability_invocation import HttpCapabilityInvocationAuthority
 from baobab_pulse.infrastructure.control_plane.context_authority import (
     ClientCredentialsTokenProvider,
@@ -50,9 +54,22 @@ def build_capability_runtime(
     }
     present = {name for name, value in required.items() if value}
     if not present:
-        if actual.environment == Environment.PRODUCTION:
+        # A connected N03 development worker may never silently become an
+        # unprotected local component simply because ALL authority settings
+        # disappeared. A partially configured status observer is likewise an
+        # explicit admission attempt, not permission to disable the PEP.
+        if actual.iam_native_n03_required or any((
+            actual.iam_introspection_url,
+            actual.iam_introspection_client_id,
+            actual.iam_introspection_client_secret,
+        )):
             raise RuntimeError(
-                "production Pulse requires IAM/JWKS/token and Control Plane "
+                "N03 current issuer-status admission unavailable: "
+                "canonical IAM/CP authority configuration missing"
+            )
+        if actual.environment in {Environment.STAGING, Environment.PRODUCTION}:
+            raise RuntimeError(
+                "protected Pulse requires IAM/JWKS/token and Control Plane "
                 "context-validation authority configuration"
             )
         return None
@@ -85,7 +102,7 @@ def build_capability_runtime(
     assert actual.iam_token_url is not None
     assert actual.control_plane_context_validation_url is not None
 
-    authenticator = OidcJwksWorkloadAuthenticator(
+    authenticator: WorkloadAuthenticatorPort = OidcJwksWorkloadAuthenticator(
         issuer=actual.iam_issuer_url,
         jwks_url=actual.iam_jwks_url,
         audience=actual.iam_resource_audience,
@@ -94,6 +111,44 @@ def build_capability_runtime(
         clock_skew_seconds=actual.iam_clock_skew_seconds,
         http_timeout_seconds=actual.authority_http_timeout_seconds,
     )
+    # N03 native resource admission: the signed JWT must ALSO be current at
+    # the issuer at request time. No bearer-status cache or CP-validator secret
+    # reuse is allowed. Protected environments fail startup until the separate
+    # issuer-status observer is actually registered and configured.
+    status_parts = {
+        "iam_introspection_url": actual.iam_introspection_url,
+        "iam_introspection_client_id": actual.iam_introspection_client_id,
+        "iam_introspection_client_secret": (
+            actual.iam_introspection_client_secret.get_secret_value()
+            if actual.iam_introspection_client_secret is not None else None
+        ),
+    }
+    status_configured = any(status_parts.values())
+    protected = actual.environment in {Environment.STAGING, Environment.PRODUCTION}
+    if protected or actual.iam_native_n03_required or status_configured:
+        missing_status = sorted(name for name, value in status_parts.items() if not value)
+        if missing_status:
+            raise RuntimeError(
+                "N03 current issuer-status admission unavailable: " + ", ".join(missing_status)
+            )
+        if actual.iam_introspection_client_id == actual.iam_client_id:
+            raise RuntimeError("N03 issuer observer cannot reuse CP validator workload identity")
+        assert actual.iam_introspection_url is not None
+        assert actual.iam_introspection_client_id is not None
+        assert actual.iam_introspection_client_secret is not None
+        authenticator = CurrentIssuerStatusWorkloadAuthenticator(
+            signed=authenticator,
+            issuer=actual.iam_issuer_url,
+            audience=actual.iam_resource_audience,
+            introspection_url=actual.iam_introspection_url,
+            introspection_client_id=actual.iam_introspection_client_id,
+            introspection_client_secret=actual.iam_introspection_client_secret.get_secret_value(),
+            timeout_seconds=actual.authority_http_timeout_seconds,
+            allow_development_loopback_http=actual.environment in {
+                Environment.LOCAL, Environment.DEVELOPMENT,
+            },
+        )
+
     validator_tokens = ClientCredentialsTokenProvider(
         token_url=actual.iam_token_url,
         client_id=actual.iam_client_id,

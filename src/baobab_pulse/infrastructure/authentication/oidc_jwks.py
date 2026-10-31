@@ -103,9 +103,19 @@ class OidcJwksWorkloadAuthenticator:
             raise WorkloadAuthenticationError("access token scope is invalid")
         scopes = frozenset(item for item in raw_scope.split() if item)
 
-        client_id = claims.get("azp")
-        if client_id is not None and not isinstance(client_id, str):
+        # Hydra-style workload JWTs may carry canonical client_id instead
+        # of azp. If both exist they must agree; a signed mismatch is not a
+        # resource-server licence to pick the more convenient identity.
+        azp = claims.get("azp")
+        client_claim = claims.get("client_id")
+        if (azp is not None and (not isinstance(azp, str) or not azp.strip())):
             raise WorkloadAuthenticationError("access token azp is invalid")
+        if (client_claim is not None and
+                (not isinstance(client_claim, str) or not client_claim.strip())):
+            raise WorkloadAuthenticationError("access token client_id is invalid")
+        if azp is not None and client_claim is not None and azp != client_claim:
+            raise WorkloadAuthenticationError("access token workload client claims disagree")
+        client_id = client_claim if client_claim is not None else azp
 
         tenant_id = claims.get("tenant_id")
         if tenant_id is not None and not isinstance(tenant_id, str):
