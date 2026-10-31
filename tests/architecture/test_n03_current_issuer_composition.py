@@ -63,3 +63,34 @@ def test_candidate_dev_does_not_silently_upgrade_provider_status() -> None:
     settings = configured(Environment.DEVELOPMENT, iam_native_n03_required=True)
     assert settings.iam_native_n03_required is True
     assert settings.iam_introspection_client_id is None
+
+
+@pytest.mark.parametrize("partial", [
+    {},
+    {"iam_introspection_client_id": "separate-observer"},
+    {"iam_introspection_url": "https://iam.example.invalid/oauth2/introspect"},
+])
+def test_n03_connected_missing_all_cp_config_does_not_disable_pep(partial: dict) -> None:
+    with pytest.raises(RuntimeError, match="N03 current issuer-status admission unavailable"):
+        build_capability_runtime(Settings(
+            _env_file=None,
+            environment=Environment.DEVELOPMENT,
+            iam_native_n03_required=True,
+            **partial,
+        ))
+
+
+def test_n03_partial_observer_cannot_silently_disable_development_pep() -> None:
+    with pytest.raises(RuntimeError, match="N03 current issuer-status admission unavailable"):
+        build_capability_runtime(Settings(
+            _env_file=None,
+            environment=Environment.DEVELOPMENT,
+            iam_introspection_client_id="separate-observer",
+        ))
+
+
+def test_plain_unconfigured_local_development_remains_explicitly_dormant() -> None:
+    # Local CLI/document jobs do not need a Pulse HTTP capability server.
+    assert build_capability_runtime(Settings(
+        _env_file=None, environment=Environment.LOCAL,
+    )) is None
