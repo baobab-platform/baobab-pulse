@@ -26,7 +26,10 @@ from baobab_pulse.application.ports.authentication import (
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
-    def redirect_request(\n        self, request: urllib.request.Request, fp: object, code: int,\n        msg: str, headers: object, newurl: str,\n    ) -> None:
+    def redirect_request(
+        self, request: urllib.request.Request, fp: object, code: int,
+        msg: str, headers: object, newurl: str,
+    ) -> None:
         return None
 
 
