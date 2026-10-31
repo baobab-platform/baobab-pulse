@@ -82,3 +82,55 @@ The tests in `tests/unit/security/test_current_issuer_status.py` and
 tests only**. No connected issuer, native resource, original evidence archive,
 independent witness or provider support promotion has occurred. This PR stays
 draft and unmerged until final-head CI and required native verification succeed.
+
+## Owner-run N03 native consumer probe (source added, NOT EXECUTED)
+
+`scripts/n03_native_development.py` now exercises **actual** Hydra
+client-credentials issuance, independently authenticated issuer introspection,
+real running Pulse `POST /evidence/search` with CP-assigned Context A and B,
+cross-context denial, missing-bearer denial, real Hydra token revocation,
+independent `active:false` readback and immediate native Pulse denial.
+A passing run produces only owner-private `native-observation.json` and
+`native-observation.sha256` (0600, unique inode, fsynced), with all seven
+original scenario keys and **UNATTESTED** development classification. Source
+tests cannot generate a qualified observation.
+
+Create an owned, `chmod 0600` JSON profile at an *absolute* private path.
+Required keys:
+`schema=baobab.pulse.n03.native-dev.v1`,
+`environment=development`, `protected_accepted=false`,
+`run_id` (32 lowercase hex), immutable 40-character
+`pulse_source_sha`, `iam_source_sha`, `cp_source_sha`,
+`shared_source_sha`, exact `hydra_origin` and `pulse_origin`,
+`clients` (an ordered two-element array containing the exact named Shared
+development onboarding and onboarding-neighbour clients, each with
+`client_id`, owner-private `secret_file` and independently issued
+`context_id` UUID), plus `issuer_observer` with a **different** IAM
+`client_id` and private `secret_file`. No private values or token bytes
+are recorded in the output.
+
+```sh
+export BAOBAB_ENVIRONMENT=development
+export PULSE_N03_PRIVATE_PROFILE=/absolute/private/n03-profile.json
+export PULSE_N03_EVIDENCE_DIR=/absolute/private/originals
+# Run from an immutable, clean, pinned Pulse checkout in a private
+# network with real Hydra, CP and Pulse; never inside mock source tests.
+python3 -B scripts/n03_native_development.py
+```
+
+**Before running:** both original CP Contexts must be demonstrably assigned
+to distinct governed development tenants and active client identities; Hydra
+must issue signed, Pulse-audience workload tokens with a maximum 15-minute
+lifetime and allow **actual access-token revocation**, which must be
+independently observable through authenticated introspection. A consent,
+missing registry client, wrong audience, revoked token or CP failure must
+cause a genuine rejection. Set `PULSE_IAM_NATIVE_N03_REQUIRED=true` and
+the separate observer credential on the running Pulse resource so the
+development runtime cannot fall back to JWKS-only checks.
+
+**Evidence ceiling:** this script does not create the CP tenants/Contexts,
+grant or activate a workload client, manage provider credentials, mutate CP
+configuration, qualify Payments or verify host teardown. It explicitly
+records `two_tenants_independently_attested=false`. Only an independent
+current CP tenant/source readback and disposable host resource inventory
+can raise this candidate's assurance; never edit this original.
