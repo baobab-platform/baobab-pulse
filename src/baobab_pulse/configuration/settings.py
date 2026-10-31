@@ -89,6 +89,10 @@ class Settings(BaseSettings):
     iam_issuer_url: str | None = None
     iam_jwks_url: str | None = None
     iam_token_url: str | None = None
+    # N03: a separate issuer-status observer. Never borrow CP validator secrets.
+    iam_introspection_url: str | None = None
+    iam_introspection_client_id: str | None = None
+    iam_introspection_client_secret: SecretStr | None = None
     iam_client_id: str = "baobab-pulse-workload"
     iam_client_secret: SecretStr | None = None
     iam_resource_audience: str = "baobab-pulse"
