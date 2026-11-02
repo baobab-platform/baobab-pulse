@@ -40,7 +40,7 @@ jobs:
           entry = [x for x in tree["package"] if x["name"] == "msgpack"]
           assert len(entry) == 1, "unexpected msgpack resolution count"
           assert tuple(map(int, entry[0]["version"].split("."))) >= (1, 2, 4)
-          pattern = r'(?ms)^\\[\\[package\\]\\]\\nname = "msgpack"\\n.*?(?=^\\[\\[package\\]\\]|\\Z)'
+          pattern = r'(?ms)^\[\[package\]\]\nname = "msgpack"\n.*?(?=^\[\[package\]\]|\Z)'
           match = re.search(pattern, lock)
           assert match, "expected exact TOML stanza"
           blob = base64.b64encode(match.group(0).encode()).decode()
