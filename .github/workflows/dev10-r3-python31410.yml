@@ -1,0 +1,57 @@
+# Native Python 3.14.10 wheel and Postgres/Qdrant test probe (no provider mock as a PASS).
+name: DEV10 R3 Python 3.14.10 Pulse qualification
+on:
+  pull_request:
+    paths: [".github/workflows/dev10-r3-python31410.yml"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  python31410:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 45
+    services:
+      postgres:
+        image: postgres:17.11-bookworm
+        env:
+          POSTGRES_DB: baobab_pulse
+          POSTGRES_USER: pulse
+          POSTGRES_PASSWORD: dev_only
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U pulse -d baobab_pulse"
+          --health-interval 5s --health-timeout 5s --health-retries 12
+      qdrant:
+        image: qdrant/qdrant:v1.19.1
+        ports: ["6333:6333"]
+    env:
+      PULSE_DATABASE_URL: postgresql://pulse:dev_only@localhost:5432/baobab_pulse
+      PULSE_QDRANT_URL: http://localhost:6333
+      UV_PYTHON_DOWNLOADS: never
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@06da6279cdbca41027908073e81a4544dc79c06b
+        with:
+          python-version: "3.14.10"
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v6
+        with:
+          version: "0.13.5"
+      - name: Enforce PSF patch version, frozen owner dependencies, and no auto-managed interpreter
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(python -c 'import sys; print(sys.version.split()[0])')" = 3.14.10
+          uv --version
+          uv sync --locked --all-groups --no-managed-python
+          uv run --no-sync python -c 'import sys; assert sys.version_info[:3] == (3,14,10)'
+      - name: Static owner validation and strict typing
+        run: |
+          uv run --no-sync ruff check .
+          uv run --no-sync mypy src
+      - name: Migrate real PostgreSQL 17 and run actual non-provider tests
+        run: |
+          uv run --no-sync python scripts/migrate.py
+          uv run --no-sync pytest -v tests/integration/test_evidence_read_audit_postgres.py
+          uv run --no-sync pytest -m "not provider"
