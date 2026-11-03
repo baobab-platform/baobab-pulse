@@ -7,47 +7,6 @@ on:
 permissions:
   contents: read
 jobs:
-  resolve-msgpack-security-lock:
-    # Temporary owner-controlled resolver evidence. This job does not
-    # replace or silently edit the committed lock; its exact resolved stanza
-    # is reviewed and committed independently, then ordinary CI must pass.
-    runs-on: ubuntu-26.04
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-python@06da6279cdbca41027908073e81a4544dc79c06b
-        with:
-          python-version: "3.14.10"
-      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v6
-        with:
-          version: "0.13.5"
-      - name: Resolve current PyPI msgpack security fix without disabling audit
-        shell: bash
-        run: |
-          set -euo pipefail
-          uv lock --upgrade-package msgpack
-          uv lock --check
-          python3 - <<'PY'
-          from pathlib import Path
-          import base64
-          import re
-          import tomllib
-          lock = Path("uv.lock").read_text()
-          tree = tomllib.loads(lock)
-          entry = [x for x in tree["package"] if x["name"] == "msgpack"]
-          assert len(entry) == 1, "unexpected msgpack resolution count"
-          assert tuple(map(int, entry[0]["version"].split("."))) >= (1, 2, 4)
-          pattern = r'(?ms)^\[\[package\]\]\nname = "msgpack"\n.*?(?=^\[\[package\]\]|\Z)'
-          match = re.search(pattern, lock)
-          assert match, "expected exact TOML stanza"
-          blob = base64.b64encode(match.group(0).encode()).decode()
-          print("DEV10_MSGPACK_STANZA_BASE64_BEGIN")
-          print(blob)
-          print("DEV10_MSGPACK_STANZA_BASE64_END")
-          PY
   python31410:
     runs-on: ubuntu-26.04
     timeout-minutes: 45
@@ -87,6 +46,7 @@ jobs:
           uv --version
           uv sync --locked --all-groups --no-managed-python
           uv run --no-sync python -c 'import sys; assert sys.version_info[:3] == (3,14,10)'
+          uv run --no-sync python -c 'from importlib.metadata import version; assert tuple(map(int, version("msgpack").split("."))) >= (1, 2, 4)'
       - name: Static owner validation and strict typing
         run: |
           uv run --no-sync ruff check .
