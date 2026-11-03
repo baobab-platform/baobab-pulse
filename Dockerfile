@@ -30,7 +30,6 @@ COPY src ./src
 COPY README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-dev \
-    && uv pip install --python /app/.venv --reinstall "msgpack==1.2.2" \
     && uv pip uninstall --python /app/.venv setuptools wheel \
     && find /app/.venv -type d \( -name 'msgpack-1.1.2.dist-info' -o -name 'setuptools-70.3.0.dist-info' \) -prune -exec rm -rf '{}' +
 
