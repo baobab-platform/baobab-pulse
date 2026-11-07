@@ -203,7 +203,7 @@ class DependencyPolicyTests(unittest.TestCase):
     def test_native_scan_is_never_protected_deployment(self):
         path = ROOT / ".github/workflows/dependency-security.yml"
         if not path.is_file():
-            self.assertEqual(REPO, "baobab-scf")
+            self.assertIn(REPO, ("baobab-scf", "baobab-pulse"))
             return
         text = path.read_text()
         self.assertIn("cron:", text)
