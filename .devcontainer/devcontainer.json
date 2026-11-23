@@ -4,7 +4,7 @@
   "remoteUser": "vscode",
   "updateRemoteUserUID": true,
   "init": true,
-  "postCreateCommand": "baobab-verify --contract && uv sync --all-groups",
+  "postCreateCommand": "python --version",
   "customizations": {
     "vscode": {
       "extensions": [
@@ -15,5 +15,6 @@
         "ms-python.mypy-type-checker"
       ]
     }
-  }
+  },
+  "waitFor": "postCreateCommand"
 }
